@@ -18,7 +18,7 @@ cv::Mat medianFilterGray(const cv::Mat& image) {
             std::vector<uchar> pixels; // for storing the values of the 8 neighbours 
             for (int y = -1; y <= 1; ++y) {
                 for (int x = -1; x <= 1; ++x) {
-                    if (y == 0 && x == 0) continue; // pix we want to set the value 
+                    if (y == 0 && x == 0) continue; 
                     pixels.push_back(image.at<uchar>(i + y, j + x));
                 }
             }
@@ -87,6 +87,7 @@ cv::Mat genericConvolutionGray(const cv::Mat &image, const cv::Mat &kernel) {
             // we apply the convlution for each pixel 
             for (int k = 0; k < kernel.rows; k++) {
                 for (int l = 0; l < kernel.cols; l++) {
+
                     int x = j - dx + l;
                     int y = i - dy + k;
                     sum += image.at<uchar>(y, x) * kernel.at<float>(k, l);
@@ -125,6 +126,83 @@ cv::Mat applyConvolution(const cv::Mat & img, const cv::Mat& kernel) {
 }
 
 
+// creation of the averaging kernel 
 cv::Mat createAveragingKernel(int size) {
     return cv::Mat::ones(size, size, CV_32F) / (float)(size * size);
 }
+
+// creation of the gauss kernel   => size of the kernel and sigma for "l ecart type"
+cv::Mat createGaussianKernel(int size, float sigma) {
+    int half_size = size / 2;
+    cv::Mat kernel(size, size, CV_32F);
+
+    float sum = 0.0f;
+
+    for (int i = -half_size; i <= half_size; ++i) {
+        for (int j = -half_size; j <= half_size; ++j) {
+            float value = exp(-(i*i + j*j) / (2 * sigma * sigma)); // for each pixel we calculate the value of the gaussienne
+            kernel.at<float>(i + half_size, j + half_size) = value;
+
+            sum += value;
+        }
+    }
+    kernel /= sum;
+    return kernel;
+}
+
+
+cv::Mat createLaplacianKernel(int size) { // problem here 
+    int half_size = size / 2;
+    //cv::Mat kernel(size, size, CV_32F, cv::Scalar(0.0f)); 
+    cv::Mat kernel(size, size, CV_32F, cv::Scalar(0));
+
+    for (int i = -half_size; i <= half_size; ++i) {
+        for (int j = -half_size; j <= half_size; ++j) {
+            if (i == 0 && j == 0) { // center of the kernel 
+                kernel.at<float>(i + half_size, j + half_size) = -4.0f;
+            }
+            else if (i == 0 || j == 0) { // center neighbours
+                kernel.at<float>(i + half_size, j + half_size) = 1.0f;
+            }
+            else { // corner
+                kernel.at<float>(i + half_size, j + half_size) = 0.0f;
+            }
+        }
+    }
+
+    return kernel;
+}
+
+
+cv::Mat createSobelKernel(int size, bool horizontal) {
+    int halfSize = size / 2;
+    cv::Mat kernel(size, size, CV_32F, cv::Scalar(0));
+
+    for (int i = -halfSize; i <= halfSize; ++i) {
+        for (int j = -halfSize; j <= halfSize; ++j) {
+            if (horizontal) {
+                kernel.at<float>(i + halfSize, j + halfSize) = j;
+            } else {
+                kernel.at<float>(i + halfSize, j + halfSize) = i;
+            }
+        }
+    }
+
+    return kernel;
+}
+
+cv::Mat createHighPassKernel(int size) {
+    if (size % 2 == 0 || size < 3) {
+        std::cerr << "Kernel size must be an odd number >= 3!" << std::endl;
+        return cv::Mat();
+    }
+
+    cv::Mat kernel(size, size, CV_32F, cv::Scalar(-1));
+    int center = size / 2;
+    kernel.at<float>(center, center) = size * size - 1; 
+
+    return kernel;
+}
+
+
+

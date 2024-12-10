@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <opencv2/opencv.hpp>
 
 // to store teacher test images 
 const std::vector<std::pair<std::string, std::string>> imageStoring = {
@@ -12,121 +13,113 @@ const std::vector<std::pair<std::string, std::string>> imageStoring = {
     {"../data/data1/lena3.png", "Lena 3"}
 };
 
-// to display the main menu
-void displayMainMenu() {
-    std::cout << "\nMain menu:\n";
-    std::cout << "1 - Choose an image\n";
-    std::cout << "2 - Quit\n";
-    std::cout << "Selection: ";
+
+// dupliquer les pixels sur la bordur d une image 
+// mettre à 0 
+// mettre à 255 
+// ne pas prendre en compte 
+
+
+void testFiltreMedian(cv::Mat & img) {
+    cv::Mat imgMedianFilter = medianFilterColor(img); 
+    showImage(imgMedianFilter, "with Median Filter"); 
 }
 
-// to display the image selection menu
-void displayImageMenu() {
-    std::cout << "\nSelect an image:\n";
-    for (unsigned int i = 0; i < imageStoring.size(); ++i) {
-        std::cout << i + 1 << " - " << imageStoring[i].second << "\n"; 
-    }
-    std::cout << imageStoring.size() + 1 << " - Otherwise enter your file path thaht u want.\n";
-    std::cout << "Wich one do u prefer ? ";
+void testAveragingKernel(cv::Mat & img) {
+    int choice = 0; 
+    std::cout<<"Wich size for ur avecraging kernel do u yant"<<std::endl; 
+    std::cin>>choice; 
+    cv::Mat kernel = createAveragingKernel(choice); 
+    cv::Mat imResult = applyConvolution(img,kernel); 
+    showImage(imResult, "with Averaging Kernel"); 
 }
 
-// to display the processing menu
-void displayProcessingMenu() {
-    std::cout << "\nProcessing image menu:\n";
-    std::cout << "1 - Apply median filter\n";
-    std::cout << "2 - Apply convolution filter\n";
-    std::cout << "3 - Apply histogram\n";
-    std::cout << "4 - Back to main menu\n";
-    std::cout << "Selection: ";
+void testGaussianKernel(cv::Mat & img) {
+    int choiceSizeKernel = 0; 
+    double choiceAlpha = 0; 
+    std::cout<<"Wich size for ur gaussian kernel do u yant"<<std::endl; 
+    std::cin>>choiceSizeKernel; 
+    std::cout<<"Wich alpha do u yant"<<std::endl; 
+    std::cin>>choiceAlpha; 
+    cv::Mat imgResult = applyConvolution(img,createGaussianKernel(choiceSizeKernel,choiceAlpha)); 
+    showImage(imgResult, "with Gaussian Filter"); 
+    
+    // with opencv
+    cv::Mat imgConvOpenCV;
+    cv::GaussianBlur(img, imgConvOpenCV, cv::Size(choiceSizeKernel, choiceSizeKernel), choiceAlpha);  
+    showImage(imgConvOpenCV, "Compate with Gauss Convolution (OpenCV)");
 }
+
+void testLaplacienKernel(cv::Mat & img) {
+    int choiceSizeKernel = 0; 
+    std::cout<<"Wich size for ur laplacien kernel do u yant"<<std::endl; 
+    std::cin>>choiceSizeKernel;    
+    cv::Mat imgResult = applyConvolution(img,createLaplacianKernel(choiceSizeKernel)); 
+    showImage(imgResult, "with Laplacien Filter"); 
+    
+    //with opencv
+    cv::Mat laplacianImage;
+    cv::Laplacian(img, laplacianImage, CV_32F, choiceSizeKernel);
+    cv::Mat laplacianImageDisplay;
+    laplacianImage.convertTo(laplacianImageDisplay, CV_8U);
+    showImage(laplacianImageDisplay, "Laplacian Filter");
+
+    // cv::Mat laplacianImage;
+    // cv::Laplacian(img, laplacianImage, CV_32F, choiceSizeKernel);
+    // cv::Mat normalizedLaplacian;
+    // cv::normalize(laplacianImage, normalizedLaplacian, 0, 255, cv::NORM_MINMAX);
+    // cv::Mat laplacianImageDisplay;
+    // normalizedLaplacian.convertTo(laplacianImageDisplay, CV_8U);
+    // showImage(laplacianImageDisplay, "Laplacian Filter");
+}
+
+
+void testSobelKernel(cv::Mat & img) {
+    int choiceSizeKernel = 0; 
+    bool choiceDirection = false; // false : vertical and true : horizontal
+    std::cout << "Which size for your Sobel kernel do u want (msut be odd number)?" << std::endl;
+    std::cin >> choiceSizeKernel;
+    std::cout << "Which Sobel direction do you want => 0 for vertical and 1 for horizontal)?" << std::endl;
+    std::cin >> choiceDirection;   
+
+    cv::Mat imgResult = applyConvolution(img, createSobelKernel(choiceSizeKernel, choiceDirection));
+    showImage(imgResult, "With Sobel Filter");
+
+    // with opencv
+    cv::Mat imgConvOpenCV;
+    cv::Sobel(img, imgConvOpenCV, CV_8U, choiceDirection ? 1 : 0, choiceDirection ? 0 : 1, choiceSizeKernel);
+    showImage(imgConvOpenCV, "Sobel with OpenCV");
+}
+
+void testHighPassKernel(cv::Mat & img) {
+    int choice = 0; 
+    std::cout<<"Wich size for ur hight pass kernel do u yant"<<std::endl; 
+    std::cin>>choice; 
+    cv::Mat kernel = createHighPassKernel(choice); 
+    cv::Mat imResult = applyConvolution(img,kernel); 
+    showImage(imResult, "with Averaging Kernel"); 
+
+    //with open cv 
+    cv::Mat blurred, highPassOpenCV;
+    cv::GaussianBlur(img, blurred, cv::Size(choice, choice), 0); 
+    highPassOpenCV = img - blurred; 
+    showImage(highPassOpenCV, "High-Pass Filter (OpenCV)");
+}
+
 
 int main() {
-    cv::Mat image;
-    int mainChoice = 0;
+    std::cout << "11111" << std::endl; 
 
-    while (true) {
-        displayMainMenu();
-        std::cin >> mainChoice;
+    std::string imagePath = "../data/data1/lena.png";
+    cv::Mat img = loadImage(imagePath); 
+    showImage(img, "Normal Image");
 
-        switch (mainChoice) {
-            case 1: { // choose an image
-                int imageChoice = 0;
-                displayImageMenu(); 
-                std::cin >> imageChoice;
-
-                if (imageChoice >= 1 && imageChoice <= (int)imageStoring.size()) { // load a predefined image
-                    image = loadImage(imageStoring[imageChoice - 1].first); // the image path 
-                    if (!image.empty()) {
-                        showImage(image, imageStoring[imageChoice - 1].second); 
-                    } else {
-                        continue;  // return to the  menu 
-                    }
-                } else if (imageChoice == (int)imageStoring.size() + 1) { // load a custom image
-                    std::string filePath;
-                    std::cout << "Enter ur file path: ";
-                    std::cin >> filePath;
-                    image = loadImage(filePath);
-                    if (!image.empty()) {
-                        showImage(image, "Ur image");
-                    } else {
-                        continue;  
-                    }
-                } else {
-                    std::cerr << "Invalid selection.\n";
-                    continue;  
-                }
-                break;
-            }
-
-
-            case 2: { // quit the app
-                std::cout << "I hope you enjoying it.\n";
-                return 0;
-            }
-
-            default:
-                std::cerr << "Invalid choice.\n";
-        }
- 
-        if (!image.empty()) { // Part two on image processing
-            int processChoice = 0;
-            while (true) {
-                displayProcessingMenu();
-                std::cin >> processChoice;
-
-                switch (processChoice) {
-                    case 1: { // for the part about median filter 
-                        cv::Mat filteredImage = applyFilterMedian(image);
-                        showImage(filteredImage, "Median filtered image");
-                        break;
-                    }
-
-                    case 2: { // for the part about convolution
-                        cv::Mat averagingKernel = createAveragingKernel(3);
-                        cv::Mat smoothedImage = applyConvolution(image, averagingKernel);
-                        showImage(smoothedImage, "Convolution Filtered Image");
-                        break;
-                    }
-
-                    case 3: { // for the part about histogram
-                        std::cout << "Not implemented yet.\n";
-                        break;
-                    }
-
-                    case 4: { // return to the main menu
-                        std::cout << "Returning to main menu.\n";
-                        image.release(); // we nedd to delete the image here to choose another one in the main menu
-                        break; 
-                    }
-
-                    default:
-                        std::cerr << "Invalid selection.\n";
-                }
-
-                if (processChoice == 4) break; // exit from the processing menu and return to the main menu
-            }
-        }
-    }
+    //testFiltreMedian(img);
+    //testAveragingKernel(img); 
+    //testGaussianKernel(img); 
+    testLaplacienKernel(img); 
+    testSobelKernel(img); 
+    //testHighPassKernel(img); 
 
     return 0;
 }
