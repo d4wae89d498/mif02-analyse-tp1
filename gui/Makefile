@@ -1,5 +1,3 @@
-CXX=clang++
-
 all: main.out
 
 main.out: main.cpp
