@@ -15,3 +15,5 @@ Makefile2
 
 cmake_install.cmake
 
+.DS_Store
+
