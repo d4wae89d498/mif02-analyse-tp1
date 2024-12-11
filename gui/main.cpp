@@ -9,14 +9,19 @@
 #include <string_view>
 #include <memory>
 #include <utility>
+#include <format>
 #define fn auto
 
 using namespace std;
 
 #include "base.h"
-#include "filter.h"
 
-uint parse_odd_uint(string str)
+#include "filter.h"
+#include "geometric.h"
+#include "histogram.h"
+
+
+fn parse_odd_uint(string str) -> uint
 {
 	uint kernel = 0;
 	auto [ptr, ec] = from_chars(str.data(), str.data() + str.size(), kernel);
@@ -26,7 +31,7 @@ uint parse_odd_uint(string str)
 	return kernel;
 }
 
-uint parse_bool(string str)
+fn parse_bool(string str) -> uint
 {
 	uint kernel = 0;
 	auto [ptr, ec] = from_chars(str.data(), str.data() + str.size(), kernel);
@@ -59,18 +64,26 @@ vector<unique_ptr<Mif02Plugin>>	plugins;
 #include "addons/filter/sobel.hpp"
 
 
+#include "addons/geometric/zoom.hpp"
+#include "addons/geometric/rotation.hpp"
+
+#include "addons/histogram/edit.hpp"
+
+
 struct Mif02Filters : public wxApp {
     virtual bool OnInit();
 };
 
 struct Mif02FiltersFrame : public wxFrame {
     const uint pictures_margin = 0;
+	const string_view status_bar_text = "Mif02 - Analyse - TP1 (Image originale à gauche; modifée à droite)";
 
     Mif02FiltersFrame();
 
-    void UpdateWindowLayout(bool);
-    void ShowImage(wxStaticBitmap* widget, const cv::Mat& image);
+    fn UpdateWindowLayout(bool) -> void;
+    fn ShowImage(wxStaticBitmap* widget, const cv::Mat& image) -> void;
 
+	string	current_picture_path;
     wxBoxSizer* mainSizer;
     wxStaticBitmap* beforeImage;
     wxStaticBitmap* afterImage;
@@ -84,7 +97,7 @@ struct Mif02FiltersFrame : public wxFrame {
 
 wxIMPLEMENT_APP(Mif02Filters);
 
-void Mif02FiltersFrame::UpdateWindowLayout(bool on_open_img) {
+fn Mif02FiltersFrame::UpdateWindowLayout(bool on_open_img) -> void {
     if (on_open_img) {
         auto minWidth = beforeImage->GetSize().GetWidth() * 2;
         auto minHeight = beforeImage->GetSize().GetHeight();
@@ -107,7 +120,7 @@ void Mif02FiltersFrame::UpdateWindowLayout(bool on_open_img) {
     mainSizer->Layout();
 }
 
-bool Mif02Filters::OnInit() {
+fn Mif02Filters::OnInit() -> bool {
     Mif02FiltersFrame* frame = new Mif02FiltersFrame();
     frame->Show(true);
     return true;
@@ -122,7 +135,7 @@ Mif02FiltersFrame::Mif02FiltersFrame()
     SetMenuBar(menuBar);
 
     CreateStatusBar();
-    SetStatusText("Mif02 - Analyse - TP1 (Image originale à gauche; modifée à droite)");
+    SetStatusText(wxString(status_bar_text.data(), status_bar_text.size()));
 
     wxPanel* panel = new wxPanel(this);
     mainSizer = new wxBoxSizer(wxVERTICAL);
@@ -231,7 +244,7 @@ Mif02FiltersFrame::Mif02FiltersFrame()
         if (openFileDialog.ShowModal() == wxID_CANCEL)
             return;
 
-        loadedImage = cv::imread(openFileDialog.GetPath().ToStdString());
+        loadedImage = cv::imread(current_picture_path = openFileDialog.GetPath().ToStdString());
         if (loadedImage.empty()) {
             wxMessageBox("Failed to load the image", "Error", wxOK | wxICON_ERROR, this);
         } else {
@@ -260,7 +273,7 @@ Mif02FiltersFrame::Mif02FiltersFrame()
     UpdateWindowLayout(true);
 }
 
-void Mif02FiltersFrame::ShowImage(wxStaticBitmap* widget, const cv::Mat& image) {
+fn Mif02FiltersFrame::ShowImage(wxStaticBitmap* widget, const cv::Mat& image) -> void {
     wxSize widgetSize = widget->GetSize();
 
     int maxWidth = widgetSize.GetWidth();
@@ -271,6 +284,15 @@ void Mif02FiltersFrame::ShowImage(wxStaticBitmap* widget, const cv::Mat& image) 
         double scaleY = static_cast<double>(maxHeight) / image.rows;
         scale = min(scaleX, scaleY);
     }
+
+	auto pic_path = current_picture_path;
+	const uint max_picpath_len = 15;
+	if (pic_path.length() > max_picpath_len) {
+        pic_path = "..." + pic_path.substr(max_picpath_len);
+    }
+	// TODO:: differencier zoom droit du gauche... laisser option user de partout...
+	SetStatusText(wxString::Format("%s | Picture : %s | Zoom : %d%% ", status_bar_text, pic_path.c_str(), (uint)(scale * 100)));
+
 
     cv::Mat resizedImage;
     if (scale < 1.0) {

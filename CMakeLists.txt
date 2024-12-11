@@ -24,6 +24,8 @@ set(SOURCES
     ${MAIN_SOURCE}
     ${CMAKE_SOURCE_DIR}/src/base.cpp
     ${CMAKE_SOURCE_DIR}/src/filter.cpp
+    ${CMAKE_SOURCE_DIR}/src/geometric.cpp
+    ${CMAKE_SOURCE_DIR}/src/histogram.cpp
 )
 
 add_executable(MonProjet ${SOURCES})

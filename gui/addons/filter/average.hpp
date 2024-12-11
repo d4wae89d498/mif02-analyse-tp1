@@ -3,7 +3,6 @@
 struct Average : Mif02Plugin
 {
     wxTextCtrl* kernelCtrl = nullptr;
-    wxTextCtrl* sigmaCtrl = nullptr;
     wxCheckBox* opencvCheckbox = nullptr;
 
 
