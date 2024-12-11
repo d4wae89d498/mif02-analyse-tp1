@@ -2,180 +2,286 @@
 #include <wx/filedlg.h>
 #include <wx/choice.h>
 #include <wx/spinctrl.h>
+#include <opencv2/opencv.hpp>
+#include <wx/dcbuffer.h>
 
-class Mif02Filters : public wxApp {
-public:
+#include <charconv>
+#include <string_view>
+#include <memory>
+#include <utility>
+#define fn auto
+
+using namespace std;
+
+#include "base.h"
+#include "filter.h"
+
+uint parse_odd_uint(string str)
+{
+	uint kernel = 0;
+	auto [ptr, ec] = from_chars(str.data(), str.data() + str.size(), kernel);
+	if (ec != errc() || !(kernel % 2)) {
+		throw runtime_error("Erreur, la valeur doit etre entiere, positive et impaire.");
+	}
+	return kernel;
+}
+
+uint parse_bool(string str)
+{
+	uint kernel = 0;
+	auto [ptr, ec] = from_chars(str.data(), str.data() + str.size(), kernel);
+	if (ec != errc() || kernel > 1) {
+		throw runtime_error("Erreur, la valeur doit etre 0 (zero) ou 1 (un).");
+	}
+	return kernel;
+}
+
+struct Mif02Plugin
+{
+	virtual fn getName() const -> string_view = 0;
+	virtual fn setupUi(wxBoxSizer*, wxPanel* ) -> void = 0;
+	virtual fn onApply(const cv::Mat&, cv::Mat&) -> void = 0;
+	virtual ~Mif02Plugin() = default;
+};
+
+vector<unique_ptr<Mif02Plugin>>	plugins;
+
+#define REGISTER_PLUGIN(TypeName)						\
+	struct TypeName##Registrar { 						\
+        TypeName##Registrar() {							\
+			plugins.push_back(make_unique<TypeName>());	\
+		}												\
+	} TypeName##Instance;
+
+#include "addons/filter/average.hpp"
+#include "addons/filter/gaussian.hpp"
+#include "addons/filter/laplacian.hpp"
+#include "addons/filter/sobel.hpp"
+
+
+struct Mif02Filters : public wxApp {
     virtual bool OnInit();
 };
 
-class Mif02FiltersFrame : public wxFrame {
-public:
+struct Mif02FiltersFrame : public wxFrame {
+    const uint pictures_margin = 0;
+
     Mif02FiltersFrame();
 
-private:
-    void OnOpen(wxCommandEvent &event);
-    void OnSelectFilter(wxCommandEvent &event);
-    void OnApplyFilter(wxCommandEvent &event);
+    void UpdateWindowLayout(bool);
+    void ShowImage(wxStaticBitmap* widget, const cv::Mat& image);
 
- wxBoxSizer* mainSizer;
-    wxChoice* filterChoice;
-    wxSpinCtrl* kernelSize;
-    wxTextCtrl* additionalParam;
-	wxStaticText* kernelLabel;
- 	wxStaticText* paramLabel;
-
+    wxBoxSizer* mainSizer;
     wxStaticBitmap* beforeImage;
     wxStaticBitmap* afterImage;
+    wxBoxSizer* imageSizer;
+    wxChoice* filterChoice;
+	wxBoxSizer* extensibleSizer;
 
-    void UpdateFilterOptions();
-
-    wxDECLARE_EVENT_TABLE();
+    cv::Mat loadedImage;
+    cv::Mat processedImage;
 };
-
-wxBEGIN_EVENT_TABLE(Mif02FiltersFrame, wxFrame)
-    EVT_MENU(wxID_OPEN, Mif02FiltersFrame::OnOpen)
-    EVT_CHOICE(wxID_ANY, Mif02FiltersFrame::OnSelectFilter)
-    EVT_BUTTON(1002, Mif02FiltersFrame::OnApplyFilter)
-wxEND_EVENT_TABLE()
 
 wxIMPLEMENT_APP(Mif02Filters);
 
+void Mif02FiltersFrame::UpdateWindowLayout(bool on_open_img) {
+    if (on_open_img) {
+        auto minWidth = beforeImage->GetSize().GetWidth() * 2;
+        auto minHeight = beforeImage->GetSize().GetHeight();
+        auto width = GetSize().GetWidth();
+        auto height = GetSize().GetHeight();
+        auto force_resize = false;
+        if (width < minWidth) {
+            width = minWidth;
+            force_resize = true;
+        }
+        if (height < minHeight) {
+            height = minHeight;
+            force_resize = true;
+        }
+        if (force_resize) {
+            SetSize(wxSize(width, height));
+        }
+        SetMinSize(wxSize(minWidth, /*minHeight +*/ 400));
+    }
+    mainSizer->Layout();
+}
+
 bool Mif02Filters::OnInit() {
-    Mif02FiltersFrame *frame = new Mif02FiltersFrame();
+    Mif02FiltersFrame* frame = new Mif02FiltersFrame();
     frame->Show(true);
     return true;
 }
 
 Mif02FiltersFrame::Mif02FiltersFrame()
-    : wxFrame(nullptr, wxID_ANY, "Image Filters UI", wxDefaultPosition, wxSize(800, 600)) {
-    // Menu Bar
-    wxMenu *fileMenu = new wxMenu;
-    fileMenu->Append(wxID_OPEN, "&Open Picture\tCtrl-O", "Open a picture file");
-
-    wxMenuBar *menuBar = new wxMenuBar;
+    : wxFrame(nullptr, wxID_ANY, "Mif02 - Analyse - TP1", wxDefaultPosition, wxSize(800, 600)) {
+    wxMenu* fileMenu = new wxMenu;
+    fileMenu->Append(wxID_OPEN, "&Open Picture\tCtrl-O");
+    wxMenuBar* menuBar = new wxMenuBar;
     menuBar->Append(fileMenu, "&File");
     SetMenuBar(menuBar);
 
-    // Status Bar
     CreateStatusBar();
-    SetStatusText("Mif02 - Analyse - TP1");
+    SetStatusText("Mif02 - Analyse - TP1 (Image originale à gauche; modifée à droite)");
 
-    // Main Layout
     wxPanel* panel = new wxPanel(this);
-   mainSizer = new wxBoxSizer(wxVERTICAL);
+    mainSizer = new wxBoxSizer(wxVERTICAL);
 
-    // Image Display
-    wxBoxSizer* imageSizer = new wxBoxSizer(wxHORIZONTAL);
-
+    imageSizer = new wxBoxSizer(wxHORIZONTAL);
     beforeImage = new wxStaticBitmap(panel, wxID_ANY, wxBitmap(200, 200));
     afterImage = new wxStaticBitmap(panel, wxID_ANY, wxBitmap(200, 200));
+    imageSizer->Add(beforeImage, 1, wxEXPAND | wxALL, pictures_margin);
+    imageSizer->Add(afterImage, 1, wxEXPAND | wxALL, pictures_margin);
 
-    imageSizer->Add(new wxStaticText(panel, wxID_ANY, "Before"), 0, wxALIGN_CENTER | wxALL, 5);
-    imageSizer->Add(beforeImage, 1, wxEXPAND | wxALL, 5);
-    imageSizer->Add(new wxStaticText(panel, wxID_ANY, "After"), 0, wxALIGN_CENTER | wxALL, 5);
-    imageSizer->Add(afterImage, 1, wxEXPAND | wxALL, 5);
+    mainSizer->Add(imageSizer, 1, wxEXPAND | wxALL, 0);
 
-    mainSizer->Add(imageSizer, 1, wxEXPAND | wxALL, 10);
-
-    // Filter Options
     wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
 
-    // Filter Selection
     wxBoxSizer* hbox1 = new wxBoxSizer(wxHORIZONTAL);
     wxStaticText* filterLabel = new wxStaticText(panel, wxID_ANY, "Filter:");
     filterChoice = new wxChoice(panel, wxID_ANY);
-    filterChoice->Append("------ Choose a filter -------");
-    filterChoice->Append("Gaussian");
-    filterChoice->Append("Median");
-    filterChoice->Append("Sharpen");
+
+    filterChoice->Append("------ Choissez un outil -------");
+	/*filterChoice->Append("-- Filtres : ---");
+    filterChoice->Append("Médian");
+    filterChoice->Append("Moyenneur");
+    filterChoice->Append("Gaussienne");
+    filterChoice->Append("Sobel");
+    filterChoice->Append("Laplacien");
+
+	filterChoice->Append("-- Amélioration d'images : ---");
+	filterChoice->Append("Voir Histogramme");
+	filterChoice->Append("Égalisation d'histogramme");
+	filterChoice->Append("Étirement ou expansion d'histogramme");
+
+	filterChoice->Append("-- Transformation géométrique : ---");
+	filterChoice->Append("Zoom");
+    filterChoice->Append("Rotation");*/
+
+	for (auto &item : plugins)
+	{
+		auto sv = item->getName();
+		filterChoice->Append(wxString(sv.data(), sv.size()));
+	}
+
     filterChoice->SetSelection(0);
     hbox1->Add(filterLabel, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
     hbox1->Add(filterChoice, 1, wxEXPAND);
     vbox->Add(hbox1, 0, wxEXPAND | wxALL, 10);
 
-    // Kernel Size
-    wxBoxSizer* hbox2 = new wxBoxSizer(wxHORIZONTAL);
-    kernelLabel = new wxStaticText(panel, wxID_ANY, "Kernel Size:");
-    kernelSize = new wxSpinCtrl(panel, wxID_ANY);
-    kernelSize->SetRange(1, 31);
-    kernelSize->SetValue(3);
-    hbox2->Add(kernelLabel, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
-    hbox2->Add(kernelSize, 1, wxEXPAND);
-    vbox->Add(hbox2, 0, wxEXPAND | wxALL, 10);
-
-    // Additional Parameter
-    wxBoxSizer* hbox3 = new wxBoxSizer(wxHORIZONTAL);
-    paramLabel = new wxStaticText(panel, wxID_ANY, "Additional Parameter:");
-    additionalParam = new wxTextCtrl(panel, wxID_ANY, "0.5");
-    hbox3->Add(paramLabel, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
-    hbox3->Add(additionalParam, 1, wxEXPAND);
-    vbox->Add(hbox3, 0, wxEXPAND | wxALL, 10);
-
-    // Apply Button
-    wxButton* applyButton = new wxButton(panel, 1002, "Apply Filter");
-    vbox->Add(applyButton, 0, wxALIGN_CENTER | wxALL, 10);
-
     mainSizer->Add(vbox, 0, wxEXPAND | wxALL, 10);
+
+    extensibleSizer = new wxBoxSizer(wxVERTICAL);
+
+    mainSizer->Add(extensibleSizer, 0, wxEXPAND | wxALL, 10);
 
     panel->SetSizer(mainSizer);
 
-    // Initially hide parameter controls
- 	kernelSize->Hide();
-	kernelLabel->Hide();
 
-    additionalParam->Hide();
-	paramLabel->Hide();
+    filterChoice->Bind(wxEVT_CHOICE, [=](wxCommandEvent& event) {
+		extensibleSizer->Clear(true);
+		cout << "Changed." << endl;
+
+        wxString selectedFilter = filterChoice->GetStringSelection();
+
+		Mif02Plugin *plugin;
+
+		for (auto& item: plugins)
+		{
+			auto sv = item->getName();
+			if (wxString(sv.data(), sv.size()) == selectedFilter)
+			{
+				plugin = item.get();
+				break ;
+			}
+		}
+
+		plugin->setupUi(extensibleSizer, panel);
+
+		wxButton* applyButton = new wxButton(panel, wxID_ANY, "Apply Filter");
+		extensibleSizer->Add(applyButton, 0, wxALIGN_CENTER | wxALL, 10);
+		applyButton->Bind(wxEVT_BUTTON, [=](wxCommandEvent& event) {
+			if (!loadedImage.empty()) {
+
+				processedImage = loadedImage.clone();
+				try {
+					plugin->onApply(loadedImage, processedImage);
+				}
+				catch (const exception& ex) {
+					wxString errorMessage = wxString::Format("Erreur : %s", ex.what());
+					wxMessageBox(errorMessage, "Info", wxOK | wxICON_INFORMATION);
+				}
+				catch (...) {
+					wxMessageBox("Une erreur inconnue s'est produite", "Info", wxOK | wxICON_INFORMATION);
+				}
+
+				ShowImage(beforeImage, loadedImage);
+				ShowImage(afterImage, processedImage);
+				UpdateWindowLayout(true);
+			} else {
+				wxMessageBox( "Merci de d'abord ouvrir une image.", "Error", wxOK | wxICON_ERROR, this);
+			}
+		});
+		mainSizer->Layout();
+    });
+
+    Bind(wxEVT_MENU, [=](wxCommandEvent& event) {
+        wxFileDialog openFileDialog(this, _("Open Image file"), "", "", "Image files (*.png;*.jpg;*.bmp)|*.png;*.jpg;*.bmp", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+
+        if (openFileDialog.ShowModal() == wxID_CANCEL)
+            return;
+
+        loadedImage = cv::imread(openFileDialog.GetPath().ToStdString());
+        if (loadedImage.empty()) {
+            wxMessageBox("Failed to load the image", "Error", wxOK | wxICON_ERROR, this);
+        } else {
+            ShowImage(beforeImage, loadedImage);
+            UpdateWindowLayout(true);
+        }
+    }, wxID_OPEN);
+
+	Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
+	//	if (!loadedImage.empty())
+	//		ShowImage(beforeImage, loadedImage);
+	//	if (!processedImage.empty())
+ 	//		ShowImage(afterImage, processedImage);
+/*
+ 		auto minWidth = beforeImage->GetMinSize().GetWidth() * 2;
+        auto minHeight = beforeImage->GetMinSize().GetHeight();
+
+
+		SetMinSize(wxSize(minWidth, minHeight));
+*/
+
+		mainSizer->Layout();
+		event.Skip();
+	});
+
+    UpdateWindowLayout(true);
 }
 
-void Mif02FiltersFrame::OnOpen(wxCommandEvent &event) {
-    wxFileDialog openFileDialog(this, _("Open Image file"), "", "", "Image files (*.png;*.jpg;*.bmp)|*.png;*.jpg;*.bmp", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+void Mif02FiltersFrame::ShowImage(wxStaticBitmap* widget, const cv::Mat& image) {
+    wxSize widgetSize = widget->GetSize();
 
-    if (openFileDialog.ShowModal() == wxID_CANCEL)
-        return;
-
-    wxMessageBox("Image file selected: " + openFileDialog.GetPath(), "Info", wxOK | wxICON_INFORMATION, this);
-    // Load image into "beforeImage"
-}
-
-void Mif02FiltersFrame::OnSelectFilter(wxCommandEvent &event) {
-    UpdateFilterOptions();
-}
-
-void Mif02FiltersFrame::OnApplyFilter(wxCommandEvent &event) {
-    wxString filter = filterChoice->GetStringSelection();
-    int kernel = kernelSize->GetValue();
-    wxString param = additionalParam->GetValue();
-
-    wxString message = wxString::Format("Applying filter: %s\nKernel Size: %d\nAdditional Param: %s", filter, kernel, param);
-    wxMessageBox(message, "Filter Application", wxOK | wxICON_INFORMATION, this);
-
-    // Process and display "afterImage"
-}
-
-void Mif02FiltersFrame::UpdateFilterOptions() {
-    wxString selectedFilter = filterChoice->GetStringSelection();
-
-    if (selectedFilter == "Median") {
-        kernelSize->Show();
-		kernelLabel->Show();
-
-        additionalParam->Hide();
-		paramLabel->Hide();
-    } else if (selectedFilter == "Gaussian") {
-        kernelSize->Show();
-		kernelLabel->Show();
-
-        additionalParam->Show();
-		paramLabel->Show();
-    } else { //if (selectedFilter == "Sharpen") {
-        kernelSize->Hide();
-		kernelLabel->Hide();
-
-        additionalParam->Hide();
-		paramLabel->Hide();
+    int maxWidth = widgetSize.GetWidth();
+    int maxHeight = widgetSize.GetHeight();
+    double scale = 1.0;
+    if (image.cols > maxWidth || image.rows > maxHeight) {
+        double scaleX = static_cast<double>(maxWidth) / image.cols;
+        double scaleY = static_cast<double>(maxHeight) / image.rows;
+        scale = min(scaleX, scaleY);
     }
 
+    cv::Mat resizedImage;
+    if (scale < 1.0) {
+        cv::resize(image, resizedImage, cv::Size(), scale, scale, cv::INTER_AREA);
+    } else {
+        resizedImage = image;
+    }
 
-    Layout(); // Force layout refresh
-	mainSizer->Layout();
+    cv::Mat tempImage;
+    cv::cvtColor(resizedImage, tempImage, cv::COLOR_BGR2RGB);
+
+    wxImage wxImg(tempImage.cols, tempImage.rows, tempImage.data, true);
+    widget->SetBitmap(wxBitmap(wxImg));
 }

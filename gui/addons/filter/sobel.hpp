@@ -1,0 +1,52 @@
+#pragma once
+
+struct Sobel : Mif02Plugin
+{
+    wxTextCtrl* kernelCtrl = nullptr;
+    wxTextCtrl* choiceDirectionCtrl = nullptr;
+    wxCheckBox* opencvCheckbox = nullptr;
+
+
+	fn getName() const -> string_view override
+	{
+		return "Sobel";
+	}
+
+	fn setupUi(wxBoxSizer* vbox, wxPanel* panel) -> void override
+	{
+		wxBoxSizer* hbox3 = new wxBoxSizer(wxHORIZONTAL);
+		wxStaticText* paramLabel = new wxStaticText(panel, wxID_ANY, "Taille du kernel :");
+		kernelCtrl = new wxTextCtrl(panel, wxID_ANY, "1");
+		hbox3->Add(paramLabel, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+		hbox3->Add(kernelCtrl, 1, wxEXPAND);
+		vbox->Add(hbox3, 0, wxEXPAND | wxALL, 10);
+
+		hbox3 = new wxBoxSizer(wxHORIZONTAL);
+		paramLabel = new wxStaticText(panel, wxID_ANY, "Direction (0 vert, 1 horizontal) :");
+		choiceDirectionCtrl = new wxTextCtrl(panel, wxID_ANY, "0");
+		hbox3->Add(paramLabel, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+		hbox3->Add(choiceDirectionCtrl, 1, wxEXPAND);
+		vbox->Add(hbox3, 0, wxEXPAND | wxALL, 10);
+
+ 		opencvCheckbox = new wxCheckBox(panel, wxID_ANY, "Utiliser fonction de OpenCV");
+		opencvCheckbox->SetValue(true);
+		vbox->Add(opencvCheckbox, 0, wxALL, 10);
+
+		return;
+	}
+
+	fn onApply(const cv::Mat& loadedImage, cv::Mat &filteredImg) -> void override
+	{
+
+		uint kernel = parse_odd_uint(kernelCtrl->GetValue().ToStdString());
+		uint choiceDirection = parse_bool(choiceDirectionCtrl->GetValue().ToStdString());
+
+
+		if (opencvCheckbox->IsChecked()) {
+			cv::Sobel(loadedImage, filteredImg, CV_8U, choiceDirection ? 1 : 0, choiceDirection ? 0 : 1, kernel);
+		} else {
+			filteredImg = applyConvolution(loadedImage, createSobelKernel(kernel, choiceDirection));
+		}
+	}
+};
+REGISTER_PLUGIN(Sobel);
