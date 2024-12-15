@@ -14,12 +14,6 @@ const std::vector<std::pair<std::string, std::string>> imageStoring = {
 };
 
 
-// dupliquer les pixels sur la bordur d une image 
-// mettre à 0 
-// mettre à 255 
-// ne pas prendre en compte 
-
-
 void testFiltreMedian(cv::Mat & img) {
     cv::Mat imgMedianFilter = medianFilterColor(img); 
     showImage(imgMedianFilter, "with Median Filter"); 
@@ -29,9 +23,13 @@ void testAveragingKernel(cv::Mat & img) {
     int choice = 0; 
     std::cout<<"Wich size for ur avecraging kernel do u yant"<<std::endl; 
     std::cin>>choice; 
+
     cv::Mat kernel = createAveragingKernel(choice); 
     cv::Mat imResult = applyConvolution(img,kernel); 
     showImage(imResult, "with Averaging Kernel"); 
+
+    cv::Mat imResultOpenCv = testAveragingKernelWithOpenCv(img,choice); 
+    showImage(imResult, "with Averaging Kernel With OpenCv"); 
 }
 
 void testGaussianKernel(cv::Mat & img) {
@@ -41,13 +39,12 @@ void testGaussianKernel(cv::Mat & img) {
     std::cin>>choiceSizeKernel; 
     std::cout<<"Wich alpha do u yant"<<std::endl; 
     std::cin>>choiceAlpha; 
+
     cv::Mat imgResult = applyConvolution(img,createGaussianKernel(choiceSizeKernel,choiceAlpha)); 
-    showImage(imgResult, "with Gaussian Filter"); 
-    
-    // with opencv
-    cv::Mat imgConvOpenCV;
-    cv::GaussianBlur(img, imgConvOpenCV, cv::Size(choiceSizeKernel, choiceSizeKernel), choiceAlpha);  
-    showImage(imgConvOpenCV, "Compate with Gauss Convolution (OpenCV)");
+    showImage(imgResult, "Gaussian Filter"); 
+
+    cv::Mat imgConvOpenCV = testGaussianKernelWithOpenCv(img, choiceSizeKernel, choiceAlpha); 
+    showImage(imgConvOpenCV, "Gaussian Filter OpenCV)");
 }
 
 void testLaplacienKernel(cv::Mat & img) {
@@ -55,22 +52,11 @@ void testLaplacienKernel(cv::Mat & img) {
     std::cout<<"Wich size for ur laplacien kernel do u yant"<<std::endl; 
     std::cin>>choiceSizeKernel;    
     cv::Mat imgResult = applyConvolution(img,createLaplacianKernel(choiceSizeKernel)); 
-    showImage(imgResult, "with Laplacien Filter"); 
+    showImage(imgResult, "Laplacien Filter"); 
     
-    //with opencv
-    cv::Mat laplacianImage;
-    cv::Laplacian(img, laplacianImage, CV_32F, choiceSizeKernel);
-    cv::Mat laplacianImageDisplay;
-    laplacianImage.convertTo(laplacianImageDisplay, CV_8U);
-    showImage(laplacianImageDisplay, "Laplacian Filter");
+    cv::Mat laplacianImage = testLaplacianKernelWithOpenCv(img, choiceSizeKernel); 
+    showImage(laplacianImage, "Laplacian Filter OpenCv");
 
-    // cv::Mat laplacianImage;
-    // cv::Laplacian(img, laplacianImage, CV_32F, choiceSizeKernel);
-    // cv::Mat normalizedLaplacian;
-    // cv::normalize(laplacianImage, normalizedLaplacian, 0, 255, cv::NORM_MINMAX);
-    // cv::Mat laplacianImageDisplay;
-    // normalizedLaplacian.convertTo(laplacianImageDisplay, CV_8U);
-    // showImage(laplacianImageDisplay, "Laplacian Filter");
 }
 
 
@@ -85,9 +71,7 @@ void testSobelKernel(cv::Mat & img) {
     cv::Mat imgResult = applyConvolution(img, createSobelKernel(choiceSizeKernel, choiceDirection));
     showImage(imgResult, "With Sobel Filter");
 
-    // with opencv
-    cv::Mat imgConvOpenCV;
-    cv::Sobel(img, imgConvOpenCV, CV_8U, choiceDirection ? 1 : 0, choiceDirection ? 0 : 1, choiceSizeKernel);
+    cv::Mat imgConvOpenCV = testSobelKernelWithOpenCv(img, choiceSizeKernel, choiceDirection);
     showImage(imgConvOpenCV, "Sobel with OpenCV");
 }
 
@@ -97,20 +81,17 @@ void testHighPassKernel(cv::Mat & img) {
     std::cin>>choice; 
     cv::Mat kernel = createHighPassKernel(choice); 
     cv::Mat imResult = applyConvolution(img,kernel); 
-    showImage(imResult, "with Averaging Kernel"); 
+    showImage(imResult, "High Pass Filter"); 
 
-    //with open cv 
-    cv::Mat blurred, highPassOpenCV;
-    cv::GaussianBlur(img, blurred, cv::Size(choice, choice), 0); 
-    highPassOpenCV = img - blurred; 
-    showImage(highPassOpenCV, "High-Pass Filter (OpenCV)");
+    cv::Mat highPassOpenCV = testHighPassKernelWithOpenCv(img, choice); 
+    showImage(highPassOpenCV, "High-Pass Filter OpenCV");
 }
 
 
 int main() {
     std::cout << "11111" << std::endl; 
 
-    std::string imagePath = "../data/data1/lena.png";
+    std::string imagePath = "../data/data1/photographe.png";
     cv::Mat img = loadImage(imagePath); 
     showImage(img, "Normal Image");
 
@@ -118,7 +99,7 @@ int main() {
     //testAveragingKernel(img); 
     //testGaussianKernel(img); 
     testLaplacienKernel(img); 
-    testSobelKernel(img); 
+    //testSobelKernel(img); 
     //testHighPassKernel(img); 
 
     return 0;

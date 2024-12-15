@@ -15,9 +15,9 @@ cv::Mat medianFilterGray(const cv::Mat& image) {
 
     for (int i = 1; i < image.rows - 1; ++i) {
         for (int j = 1; j < image.cols - 1; ++j) {
-            std::vector<uchar> pixels; // for storing the values of the 8 neighbours 
+            std::vector<uchar> pixels; // for storing the values of the neighbours 
             for (int y = -1; y <= 1; ++y) {
-                for (int x = -1; x <= 1; ++x) {
+                for (int x = -1; x <= 1; ++x) { // 3*3
                     if (y == 0 && x == 0) continue; 
                     pixels.push_back(image.at<uchar>(i + y, j + x));
                 }
@@ -58,49 +58,75 @@ cv::Mat applyFilterMedian(const cv::Mat &img) {
 }
 
 
-
 ///////////////////////////////////////// CONVOLUTION FILTER /////////////////////////////////////////
 
 
 cv::Mat genericConvolutionGray(const cv::Mat &image, const cv::Mat &kernel) {
-    if (image.channels() != 1) { // function only for gray images
+    if (image.channels() != 1) { 
         std::cerr << "Only grayscale images are supported in genericConvolutionGray." << std::endl;
         return cv::Mat();
     }
 
-    if (kernel.rows % 2 == 0 || kernel.cols % 2 == 0) { // convolution only works if the kernel is odd
+    if (kernel.rows % 2 == 0 || kernel.cols % 2 == 0) { 
         std::cerr << "The size of the kernel must be odd." << std::endl;
         return cv::Mat();
     }
 
-    cv::Mat resultConvolution(image.rows, image.cols, image.type()); // output image
+    cv::Mat resultConvolution(image.rows, image.cols, image.type());
 
-    // we need that to look over the kernel symmetrically around the central pixel
-    const int dx = kernel.cols / 2;  // half-width of the kernel 
-    const int dy = kernel.rows / 2; // half-height of the kernel
+    const int dx = kernel.cols / 2; 
+    const int dy = kernel.rows / 2;
 
+    int borderHandling = 0; 
     
-    for (int i = dy; i < image.rows - dy; i++) {
-        for (int j = dx; j < image.cols - dx; j++) {
+    for (int i = 0; i < image.rows; i++) {
+        for (int j = 0; j < image.cols; j++) {
             float sum = 0.0f;
+            bool ignorePixel = false; 
 
-            // we apply the convlution for each pixel 
             for (int k = 0; k < kernel.rows; k++) {
                 for (int l = 0; l < kernel.cols; l++) {
-
                     int x = j - dx + l;
                     int y = i - dy + k;
-                    sum += image.at<uchar>(y, x) * kernel.at<float>(k, l);
+
+                    switch (borderHandling) {
+                        case 0: // duplicate the pixel by the value of the near pixel neighoubrs
+                            x = std::max(0, std::min(x, image.cols - 1));
+                            y = std::max(0, std::min(y, image.rows - 1));
+                            break;
+                        case 1: // set the pixel to 0 => black padding
+                            if (x < 0 || x >= image.cols || y < 0 || y >= image.rows)
+                                continue; 
+                            break;
+                        case 2: // set the pixel to 255 => white padding
+                            if (x < 0 || x >= image.cols || y < 0 || y >= image.rows) {
+                                sum += 255 * kernel.at<float>(k, l);
+                                continue;
+                            }
+                            break;
+                        case 3: // ignore the edges 
+                            if (x < 0 || x >= image.cols || y < 0 || y >= image.rows) {
+                                ignorePixel = true;
+                            }
+                            break;
+                    }
+
+                    if (!ignorePixel) { 
+                        sum += image.at<uchar>(y, x) * kernel.at<float>(k, l);
+                    }
                 }
             }
 
-            // we update the value og the pixel
-            resultConvolution.at<uchar>(i, j) = cv::saturate_cast<uchar>(sum); // we ensure that the interval is respected in [0,255]
+            if (!ignorePixel) { 
+                resultConvolution.at<uchar>(i, j) = cv::saturate_cast<uchar>(sum);
+            }
         }
     }
 
     return resultConvolution;
 }
+
+
 
 
 cv::Mat genericConvolutionColor(const cv::Mat& image, const cv::Mat& kernel) {
@@ -126,12 +152,15 @@ cv::Mat applyConvolution(const cv::Mat & img, const cv::Mat& kernel) {
 }
 
 
-// creation of the averaging kernel 
+
+/////////// creation of the different kernel 
+
+
 cv::Mat createAveragingKernel(int size) {
     return cv::Mat::ones(size, size, CV_32F) / (float)(size * size);
 }
 
-// creation of the gauss kernel   => size of the kernel and sigma for "l ecart type"
+
 cv::Mat createGaussianKernel(int size, float sigma) {
     int half_size = size / 2;
     cv::Mat kernel(size, size, CV_32F);
@@ -149,12 +178,11 @@ cv::Mat createGaussianKernel(int size, float sigma) {
     kernel /= sum;
     return kernel;
 }
-
+ 
 
 cv::Mat createLaplacianKernel(int size) { // problem here 
     int half_size = size / 2;
-    //cv::Mat kernel(size, size, CV_32F, cv::Scalar(0.0f)); 
-    cv::Mat kernel(size, size, CV_32F, cv::Scalar(0));
+    cv::Mat kernel(size, size, CV_32F, cv::Scalar(0.0f)); 
 
     for (int i = -half_size; i <= half_size; ++i) {
         for (int j = -half_size; j <= half_size; ++j) {
@@ -192,11 +220,6 @@ cv::Mat createSobelKernel(int size, bool horizontal) {
 }
 
 cv::Mat createHighPassKernel(int size) {
-    if (size % 2 == 0 || size < 3) {
-        std::cerr << "Kernel size must be an odd number >= 3!" << std::endl;
-        return cv::Mat();
-    }
-
     cv::Mat kernel(size, size, CV_32F, cv::Scalar(-1));
     int center = size / 2;
     kernel.at<float>(center, center) = size * size - 1; 
@@ -205,4 +228,42 @@ cv::Mat createHighPassKernel(int size) {
 }
 
 
+//////////// comparaison with open cv 
+
+cv::Mat testAveragingKernelWithOpenCv(const cv::Mat &img, int size) {
+    cv::Mat kernel = cv::Mat::ones(size, size, CV_32F) / (float)(size * size);
+    cv::Mat result;
+    cv::filter2D(img, result, -1, kernel, cv::Point(-1, -1), 0, cv::BORDER_DEFAULT);
+    return result;
+}
+
+cv::Mat testGaussianKernelWithOpenCv(const cv::Mat &img, int sizeKernel, double alpha) {
+    cv::Mat imgConvOpenCV;
+    cv::GaussianBlur(img, imgConvOpenCV, cv::Size(sizeKernel, sizeKernel), alpha, alpha);  
+    return imgConvOpenCV; 
+}
+
+cv::Mat testSobelKernelWithOpenCv(const cv::Mat &img, int choiceSizeKernel, int choiceDirection) {
+    cv::Mat imgConvOpenCV;
+    cv::Sobel(img, imgConvOpenCV, CV_8U, 
+              choiceDirection == 1 ? 1 : 0, 
+              choiceDirection == 0 ? 1 : 0, 
+              choiceSizeKernel);
+
+    return imgConvOpenCV;
+}
+
+cv::Mat testHighPassKernelWithOpenCv(const cv::Mat &img, int choice) {
+    cv::Mat blurred, highPassOpenCV;
+    cv::GaussianBlur(img, blurred, cv::Size(choice, choice), 0);
+    highPassOpenCV = img - blurred;
+    return highPassOpenCV;
+}
+
+cv::Mat testLaplacianKernelWithOpenCv(const cv::Mat &img, int kernelSize) {
+    cv::Mat laplacianImage, result;
+    cv::Laplacian(img, laplacianImage, CV_16S, kernelSize);
+    cv::convertScaleAbs(laplacianImage, result);
+    return result;
+}
 
