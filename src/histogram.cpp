@@ -10,9 +10,9 @@ int Round(float value)
 }
 
 
-std::array<ull, 256> CalcHist(const cv::Mat& img, int channel)
+histogram calcHist(const cv::Mat& img, int channel)
 {
-	std::array<ull, 256> output = {0};
+	histogram output = {0};
 
 	if (img.channels() != 3) {
 		throw std::runtime_error("L'image doit avoir trois canneaux (BGR)");
@@ -29,7 +29,7 @@ std::array<ull, 256> CalcHist(const cv::Mat& img, int channel)
 	return output;
 }
 
-void NormalizeHist(std::array<ull, 256> &hist, int maxVal)
+void normalizeHist(histogram &hist, int maxVal)
 {
 	int maxHistValue = *std::max_element(hist.begin(), hist.end());
 	if (maxHistValue == 0) return;
@@ -39,15 +39,15 @@ void NormalizeHist(std::array<ull, 256> &hist, int maxVal)
 	}
 }
 
-cv::Mat generateHistogram(const cv::Mat& img)
+cv::Mat generateHist(const cv::Mat& img)
 {
-	auto bHist = CalcHist(img, 0);  // B
-	auto gHist = CalcHist(img, 1);  // G
-	auto rHist = CalcHist(img, 2);  // R
+	auto bHist = calcHist(img, 0);  // B
+	auto gHist = calcHist(img, 1);  // G
+	auto rHist = calcHist(img, 2);  // R
 
-	NormalizeHist(bHist);
-	NormalizeHist(gHist);
-	NormalizeHist(rHist);
+	normalizeHist(bHist);
+	normalizeHist(gHist);
+	normalizeHist(rHist);
 
 	int histHeight = 256;
 	int histWidth = 512;
@@ -91,4 +91,42 @@ cv::Mat generateHistogram(const cv::Mat& img)
 	}
 
 	return histImage;
+}
+
+
+
+cv::Mat equalizeHist(const cv::Mat& img, double contrast_factor)
+{
+	if (img.channels() != 3) {
+		throw std::runtime_error("L'image doit avoir trois canals (BGR)");
+	}
+
+	cv::Mat result = img.clone();
+
+	for (int c = 0; c < 3; c++) {
+		histogram hist = calcHist(img, c);
+
+		histogram cdf = {0};
+		cdf[0] = hist[0];
+		for (int i = 1; i < 256; i++) {
+			cdf[i] = cdf[i - 1] + hist[i];
+		}
+
+		auto min_cdf = cdf[0];
+		auto max_cdf = cdf[255];
+		for (int i = 0; i < 256; i++) {
+			cdf[i] = ((cdf[i] - min_cdf) * 255) / (max_cdf - min_cdf);
+		}
+
+		for (int y = 0; y < img.rows; y++) {
+			for (int x = 0; x < img.cols; x++) {
+				cv::Vec3b pixel = img.at<cv::Vec3b>(y, x);
+				int new_value = static_cast<int>(cdf[pixel[c]] * contrast_factor);
+				new_value = std::min(std::max(new_value, 0), 255);
+				result.at<cv::Vec3b>(y, x)[c] = static_cast<uchar>(new_value);
+			}
+		}
+	}
+
+	return result;
 }

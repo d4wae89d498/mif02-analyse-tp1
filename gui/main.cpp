@@ -21,36 +21,31 @@ using namespace std;
 #include "histogram.h"
 
 
-class CVImageWindow : public wxFrame
+/*
+ *	class-outil pour remplacer cv::imshow afin de pouvoir fermer les previews
+ */
+struct CVImageWindow : wxFrame
 {
-public:
-    CVImageWindow(wxWindow* parent, const wxString& title, const cv::Mat& img)
-        : wxFrame(parent, wxID_ANY, title)
-    {
-        // Convert OpenCV cv::Mat to wxImage
-        cv::Mat imgRGB;
-        cv::cvtColor(img, imgRGB, cv::COLOR_BGR2RGB);  // Convert from BGR to RGB
+	CVImageWindow(wxWindow* parent, const wxString& title, const cv::Mat& img)
+		: wxFrame(parent, wxID_ANY, title)
+	{
+		cv::Mat imgRGB;
+		cv::cvtColor(img, imgRGB, cv::COLOR_BGR2RGB);
 
-        // Create a wxImage from the cv::Mat
-        wxImage wxImg(imgRGB.cols, imgRGB.rows, imgRGB.data, true);
+		wxImage wxImg(imgRGB.cols, imgRGB.rows, imgRGB.data, true);
 
-        // Create a StaticBitmap to display the wxImage
-        m_imageCtrl = new wxStaticBitmap(this, wxID_ANY, wxBitmap(wxImg));
+		imageCtrl = new wxStaticBitmap(this, wxID_ANY, wxBitmap(wxImg));
 
-        // Create a vertical box sizer and add the image control
-        wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
-        vbox->Add(m_imageCtrl, 1, wxEXPAND | wxALL, 10);
-        SetSizer(vbox);
+		wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
+		vbox->Add(imageCtrl, 1, wxEXPAND | wxALL, 10);
+		SetSizer(vbox);
 
-        // Set the size of the window based on the image size
-        SetSize(wxSize(imgRGB.cols + 20, imgRGB.rows + 50));
+		SetSize(wxSize(imgRGB.cols + 20, imgRGB.rows + 50));
 
-        // Show the frame
-        Show(true);
-    }
+		Show(true);
+	}
 
-private:
-    wxStaticBitmap* m_imageCtrl;  // To display the image
+	wxStaticBitmap* imageCtrl;
 };
 
 
@@ -76,7 +71,7 @@ vector<unique_ptr<Mif02Plugin>>	plugins;
 
 #define REGISTER_PLUGIN(TypeName)						\
 	struct TypeName##Registrar { 						\
-        TypeName##Registrar() {							\
+		TypeName##Registrar() {							\
 			plugins.push_back(make_unique<TypeName>());	\
 		}												\
 	} TypeName##Instance;
@@ -102,110 +97,111 @@ Components::BoolInput 		useOpenCVComponent 	{ "Utiliser fonction de OpenCV", fal
 #include "addons/geometric/zoom.hpp"
 #include "addons/geometric/rotation.hpp"
 
-#include "addons/histogram/edit.hpp"
+#include "addons/histogram/show.hpp"
+#include "addons/histogram/equalize.hpp"
 
 
 struct Mif02Filters : public wxApp {
-    virtual bool OnInit();
+	virtual bool OnInit();
 };
 
 struct Mif02FiltersFrame : public wxFrame {
-    const uint pictures_margin = 0;
+	const uint pictures_margin = 0;
 	const string_view status_bar_text = "Mif02 - Analyse - TP1 (Image originale à gauche; modifée à droite)";
 
-    Mif02FiltersFrame();
+	Mif02FiltersFrame();
 
-    fn UpdateWindowLayout(bool) -> void;
-    fn ShowImage(wxStaticBitmap* widget, const cv::Mat& image) -> void;
+	fn UpdateWindowLayout(bool) -> void;
+	fn ShowImage(wxStaticBitmap* widget, const cv::Mat& image) -> void;
 
 	string	current_picture_path;
-    wxBoxSizer* mainSizer;
-    wxStaticBitmap* beforeImage;
-    wxStaticBitmap* afterImage;
-    wxBoxSizer* imageSizer;
-    wxChoice* filterChoice;
+	wxBoxSizer* mainSizer;
+	wxStaticBitmap* beforeImage;
+	wxStaticBitmap* afterImage;
+	wxBoxSizer* imageSizer;
+	wxChoice* filterChoice;
 	wxBoxSizer* extensibleSizer;
 
-    cv::Mat loadedImage;
-    cv::Mat processedImage;
+	cv::Mat loadedImage;
+	cv::Mat processedImage;
 };
 
 wxIMPLEMENT_APP(Mif02Filters);
 
 fn Mif02FiltersFrame::UpdateWindowLayout(bool on_open_img) -> void {
-    if (on_open_img) {
-        auto minWidth = beforeImage->GetSize().GetWidth() * 2;
-        auto minHeight = beforeImage->GetSize().GetHeight();
-        auto width = GetSize().GetWidth();
-        auto height = GetSize().GetHeight();
-        auto force_resize = false;
-        if (width < minWidth) {
-            width = minWidth;
-            force_resize = true;
-        }
-        if (height < minHeight) {
-            height = minHeight;
-            force_resize = true;
-        }
-        if (force_resize) {
-            SetSize(wxSize(width, height));
-        }
-        SetMinSize(wxSize(minWidth, /*minHeight +*/ 400));
-    }
-    mainSizer->Layout();
+	if (on_open_img) {
+		auto minWidth = beforeImage->GetSize().GetWidth() * 2;
+		auto minHeight = beforeImage->GetSize().GetHeight();
+		auto width = GetSize().GetWidth();
+		auto height = GetSize().GetHeight();
+		auto force_resize = false;
+		if (width < minWidth) {
+			width = minWidth;
+			force_resize = true;
+		}
+		if (height < minHeight) {
+			height = minHeight;
+			force_resize = true;
+		}
+		if (force_resize) {
+			SetSize(wxSize(width, height));
+		}
+		SetMinSize(wxSize(minWidth, /*minHeight +*/ 400));
+	}
+	mainSizer->Layout();
 }
 
 fn Mif02Filters::OnInit() -> bool {
-    Mif02FiltersFrame* frame = new Mif02FiltersFrame();
-    frame->Show(true);
-    return true;
+	Mif02FiltersFrame* frame = new Mif02FiltersFrame();
+	frame->Show(true);
+	return true;
 }
 
 Mif02FiltersFrame::Mif02FiltersFrame()
-    : wxFrame(nullptr, wxID_ANY, "Mif02 - Analyse - TP1", wxDefaultPosition, wxSize(800, 600)) {
-    wxMenu* fileMenu = new wxMenu;
-    fileMenu->Append(wxID_OPEN, "&Ouvrir une image\tCtrl-O");
-    wxMenuBar* menuBar = new wxMenuBar;
-    menuBar->Append(fileMenu, "&File");
-    SetMenuBar(menuBar);
+	: wxFrame(nullptr, wxID_ANY, "Mif02 - Analyse - TP1", wxDefaultPosition, wxSize(800, 600)) {
+	wxMenu* fileMenu = new wxMenu;
+	fileMenu->Append(wxID_OPEN, "&Ouvrir une image\tCtrl-O");
+	wxMenuBar* menuBar = new wxMenuBar;
+	menuBar->Append(fileMenu, "&File");
+	SetMenuBar(menuBar);
 
-    CreateStatusBar();
-    SetStatusText(wxString(status_bar_text.data(), status_bar_text.size()));
+	CreateStatusBar();
+	SetStatusText(wxString(status_bar_text.data(), status_bar_text.size()));
 
-    wxPanel* panel = new wxPanel(this);
-    mainSizer = new wxBoxSizer(wxVERTICAL);
+	wxPanel* panel = new wxPanel(this);
+	mainSizer = new wxBoxSizer(wxVERTICAL);
 
-    imageSizer = new wxBoxSizer(wxHORIZONTAL);
-    beforeImage = new wxStaticBitmap(panel, wxID_ANY, wxBitmap(200, 200));
-    afterImage = new wxStaticBitmap(panel, wxID_ANY, wxBitmap(200, 200));
-    imageSizer->Add(beforeImage, 1, wxEXPAND | wxALL, pictures_margin);
-    imageSizer->Add(afterImage, 1, wxEXPAND | wxALL, pictures_margin);
+	imageSizer = new wxBoxSizer(wxHORIZONTAL);
+	beforeImage = new wxStaticBitmap(panel, wxID_ANY, wxBitmap(200, 200));
+	afterImage = new wxStaticBitmap(panel, wxID_ANY, wxBitmap(200, 200));
+	imageSizer->Add(beforeImage, 1, wxEXPAND | wxALL, pictures_margin);
+	imageSizer->Add(afterImage, 1, wxEXPAND | wxALL, pictures_margin);
 
-    mainSizer->Add(imageSizer, 1, wxEXPAND | wxALL, 0);
+	mainSizer->Add(imageSizer, 1, wxEXPAND | wxALL, 0);
 
-    wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
 
-    wxBoxSizer* hbox1 = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticText* filterLabel = new wxStaticText(panel, wxID_ANY, "Fonction:");
-    filterChoice = new wxChoice(panel, wxID_ANY);
-    filterChoice->Append("------ Choissez un outil -------");
+	wxBoxSizer* hbox1 = new wxBoxSizer(wxHORIZONTAL);
+	wxStaticText* filterLabel = new wxStaticText(panel, wxID_ANY, "Fonction:");
+	filterChoice = new wxChoice(panel, wxID_ANY);
+	filterChoice->Append("------ Choissez un outil -------");
 	for (auto &item : plugins)
 	{
 		auto sv = item->getName();
 		filterChoice->Append(wxString(sv.data(), sv.size()));
 	}
-    filterChoice->SetSelection(0);
-    hbox1->Add(filterLabel, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
-    hbox1->Add(filterChoice, 1, wxEXPAND);
-    vbox->Add(hbox1, 0, wxEXPAND | wxALL, 10);
-    mainSizer->Add(vbox, 0, wxEXPAND | wxALL, 10);
-    extensibleSizer = new wxBoxSizer(wxVERTICAL);
-    mainSizer->Add(extensibleSizer, 0, wxEXPAND | wxALL, 10);
-    panel->SetSizer(mainSizer);
+	filterChoice->SetSelection(0);
+	hbox1->Add(filterLabel, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+	hbox1->Add(filterChoice, 1, wxEXPAND);
+	vbox->Add(hbox1, 0, wxEXPAND | wxALL, 10);
+	mainSizer->Add(vbox, 0, wxEXPAND | wxALL, 10);
+	extensibleSizer = new wxBoxSizer(wxVERTICAL);
+	mainSizer->Add(extensibleSizer, 0, wxEXPAND | wxALL, 10);
+	panel->SetSizer(mainSizer);
 
-    filterChoice->Bind(wxEVT_CHOICE, [=](wxCommandEvent& event) {
+	filterChoice->Bind(wxEVT_CHOICE, [=](wxCommandEvent& event) {
 		extensibleSizer->Clear(true);
-        wxString selectedFilter = filterChoice->GetStringSelection();
+		wxString selectedFilter = filterChoice->GetStringSelection();
 		Mif02Plugin *plugin = nullptr;
 		for (auto& item: plugins)
 		{
@@ -243,62 +239,62 @@ Mif02FiltersFrame::Mif02FiltersFrame()
 			}
 		});
 		mainSizer->Layout();
-    });
+	});
 
-    Bind(wxEVT_MENU, [=](wxCommandEvent& event) {
-        wxFileDialog openFileDialog(this, _("Open Image file"), "", "", "Image files (*.png;*.jpg;*.bmp)|*.png;*.jpg;*.bmp", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	Bind(wxEVT_MENU, [=](wxCommandEvent& event) {
+		wxFileDialog openFileDialog(this, _("Open Image file"), "", "", "Image files (*.png;*.jpg;*.bmp)|*.png;*.jpg;*.bmp", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
-        if (openFileDialog.ShowModal() == wxID_CANCEL)
-            return;
+		if (openFileDialog.ShowModal() == wxID_CANCEL)
+			return;
 
-        loadedImage = cv::imread(current_picture_path = openFileDialog.GetPath().ToStdString());
-        if (loadedImage.empty()) {
-            wxMessageBox("Failed to load the image", "Error", wxOK | wxICON_ERROR, this);
-        } else {
-            ShowImage(beforeImage, loadedImage);
-            UpdateWindowLayout(true);
-        }
-    }, wxID_OPEN);
+		loadedImage = cv::imread(current_picture_path = openFileDialog.GetPath().ToStdString());
+		if (loadedImage.empty()) {
+			wxMessageBox("Failed to load the image", "Error", wxOK | wxICON_ERROR, this);
+		} else {
+			ShowImage(beforeImage, loadedImage);
+			UpdateWindowLayout(true);
+		}
+	}, wxID_OPEN);
 
 	Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
 		mainSizer->Layout();
 		event.Skip();
 	});
 
-    UpdateWindowLayout(true);
+	UpdateWindowLayout(true);
 }
 
 fn Mif02FiltersFrame::ShowImage(wxStaticBitmap* widget, const cv::Mat& image) -> void {
-    wxSize widgetSize = widget->GetSize();
+	wxSize widgetSize = widget->GetSize();
 
-    int maxWidth = widgetSize.GetWidth();
-    int maxHeight = widgetSize.GetHeight();
-    double scale = 1.0;
-    if (image.cols > maxWidth || image.rows > maxHeight) {
-        double scaleX = static_cast<double>(maxWidth) / image.cols;
-        double scaleY = static_cast<double>(maxHeight) / image.rows;
-        scale = min(scaleX, scaleY);
-    }
+	int maxWidth = widgetSize.GetWidth();
+	int maxHeight = widgetSize.GetHeight();
+	double scale = 1.0;
+	if (image.cols > maxWidth || image.rows > maxHeight) {
+		double scaleX = static_cast<double>(maxWidth) / image.cols;
+		double scaleY = static_cast<double>(maxHeight) / image.rows;
+		scale = min(scaleX, scaleY);
+	}
 
 	auto pic_path = current_picture_path;
 	const uint max_picpath_len = 15;
 	if (pic_path.length() > max_picpath_len) {
-        pic_path = "..." + pic_path.substr(max_picpath_len);
-    }
+		pic_path = "..." + pic_path.substr(max_picpath_len);
+	}
 	// TODO:: differencier zoom droit du gauche... laisser option user de partout...
 	SetStatusText(wxString::Format("%s | Picture : %s | Zoom : %d%% ", status_bar_text, pic_path.c_str(), (uint)(scale * 100)));
 
 
-    cv::Mat resizedImage;
-    if (scale < 1.0) {
-        cv::resize(image, resizedImage, cv::Size(), scale, scale, cv::INTER_AREA);
-    } else {
-        resizedImage = image;
-    }
+	cv::Mat resizedImage;
+	if (scale < 1.0) {
+		cv::resize(image, resizedImage, cv::Size(), scale, scale, cv::INTER_AREA);
+	} else {
+		resizedImage = image;
+	}
 
-    cv::Mat tempImage;
-    cv::cvtColor(resizedImage, tempImage, cv::COLOR_BGR2RGB);
+	cv::Mat tempImage;
+	cv::cvtColor(resizedImage, tempImage, cv::COLOR_BGR2RGB);
 
-    wxImage wxImg(tempImage.cols, tempImage.rows, tempImage.data, true);
-    widget->SetBitmap(wxBitmap(wxImg));
+	wxImage wxImg(tempImage.cols, tempImage.rows, tempImage.data, true);
+	widget->SetBitmap(wxBitmap(wxImg));
 }

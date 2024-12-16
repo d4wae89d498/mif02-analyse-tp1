@@ -4,9 +4,9 @@
 #include <opencv2/opencv.hpp>
 #include <unordered_map>
 #include <iostream>
-#ifndef ull
-# define ull unsigned long long
-#endif
+
+using histogram = std::array<unsigned long long, 256>;
+
 // eveything about histogram transformations ....
 
 /*
@@ -18,20 +18,26 @@ int Round(float value);
 /*
  *	Compte le nombre de pixel par couleur (entre 0 et 255) pour le channel demande
  */
-std::array<ull, 256> CalcHist(const cv::Mat& img, int channel);
+histogram calcHist(const cv::Mat& img, int channel);
 
 
 /*
  *  Met l'histogram a l'echelle  demandee
  */
-void NormalizeHist(std::array<ull, 256> &hist, int maxVal = 255);
+void normalizeHist(histogram &hist, int maxVal = 255);
 
 
 /*
- *  Calcule l'histogramme d'une image en utilisant des tableaux std::array<ull, 256> pour chaque canal (BGR),
+ *  Calcule l'histogramme d'une image en utilisant des tableaux histogram pour chaque canal (BGR),
  *	puis le normalise avant de le retourner sous forme d'image ocv avec des labels d'échelle pour les axes.
  */
-cv::Mat generateHistogram(const cv::Mat& img);
+cv::Mat generateHist(const cv::Mat& img);
+
+
+/*
+ *  Ajustement du contraste
+ */
+cv::Mat equalizeHist(const cv::Mat& img, double contrast_factor = 1.0);
 
 
 #endif
