@@ -21,15 +21,11 @@ struct HistogramShift : Mif02Plugin
 
 	fn onApply(const cv::Mat& loadedImage, cv::Mat& filteredImg) -> void override
 	{
-
-		new CVImageWindow(nullptr, "Histograme avant traitement", generateHist(loadedImage));
-
+		new CVImageWindow(nullptr, "Histograme avant traitement", generateHist(loadedImage), 300);
 
 		filteredImg = shiftColors(loadedImage, redComponent.getValue(), greenComponent.getValue(), blueComponent.getValue());
 
-
-		new CVImageWindow(nullptr, "Histograme apres traitement", generateHist(filteredImg));
-
+		new CVImageWindow(nullptr, "Histograme apres traitement", generateHist(filteredImg), -300);
 	}
 };
 

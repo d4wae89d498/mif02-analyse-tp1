@@ -7,15 +7,10 @@ struct OddIntegerInput : IntegerInput {
 
 	using IntegerInput::IntegerInput;
 
-	void setupUi(
-					wxBoxSizer* vbox,
-					wxPanel* panel,
-					std::optional<string_view> label_opt = std::nullopt,
-					std::optional<int> default_value_opt = std::nullopt,
-					std::optional<int> min_value_opt = std::nullopt,
-					std::optional<int> max_value_opt = std::nullopt)
+	template <typename... Args>
+	void setupUi(wxBoxSizer* vbox, wxPanel* panel, Args&&... args)
 	{
-		IntegerInput::setupUi(vbox, panel, label_opt, default_value_opt, min_value_opt, max_value_opt);
+		IntegerInput::setupUi(vbox, panel, std::forward<Args>(args)...);
 		slider->Bind(wxEVT_SLIDER, &OddIntegerInput::onSliderChange, this);
 	}
 

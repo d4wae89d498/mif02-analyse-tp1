@@ -22,13 +22,26 @@ using namespace std;
 
 
 /*
- *	class-outil pour remplacer cv::imshow afin de pouvoir fermer les previews
+ * Class-outil pour remplacer cv::imshow afin de pouvoir fermer les previews.
+ * Prend en param l'image a afficher et loffset pour decaler la window par rapport au centre de l'ecran.
  */
 struct CVImageWindow : wxFrame
 {
-	CVImageWindow(wxWindow* parent, const wxString& title, const cv::Mat& img)
+  CVImageWindow(wxWindow* parent, const wxString& title, const cv::Mat& img, int offsetX = 0, int offsetY = 0)
 		: wxFrame(parent, wxID_ANY, title)
 	{
+		wxSize screenSize = wxGetDisplaySize();
+		int screenCenterX = screenSize.GetWidth() / 2;
+		int screenCenterY = screenSize.GetHeight() / 2;
+
+		wxSize windowSize = this->GetSize();
+
+		int windowPosX = screenCenterX - windowSize.GetWidth() / 2 + offsetX;
+		int windowPosY = screenCenterY - windowSize.GetHeight() / 2 + offsetY;
+
+		SetPosition(wxPoint(windowPosX, windowPosY));
+
+
 		cv::Mat imgRGB;
 		cv::cvtColor(img, imgRGB, cv::COLOR_BGR2RGB);
 
