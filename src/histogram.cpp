@@ -130,3 +130,31 @@ cv::Mat equalizeHist(const cv::Mat& img, double contrast_factor)
 
 	return result;
 }
+
+
+cv::Mat stretchHist(const cv::Mat& img, double stretch_factor)
+{
+	if (img.channels() != 3) {
+		throw std::runtime_error("L'image doit avoir trois canaux (BGR)");
+	}
+	cv::Mat result = img.clone();
+	for (int c = 0; c < 3; c++) {
+		histogram hist = calcHist(img, c);
+		int min_val = 255, max_val = 0;
+		for (int i = 0; i < 256; i++) {
+			if (hist[i] > 0) {
+				min_val = std::min(min_val, i);
+				max_val = std::max(max_val, i);
+			}
+		}
+		for (int y = 0; y < img.rows; y++) {
+			for (int x = 0; x < img.cols; x++) {
+				cv::Vec3b pixel = img.at<cv::Vec3b>(y, x);
+				int new_value = static_cast<int>((pixel[c] - min_val) * 255.0 / (max_val - min_val) * stretch_factor);
+				new_value = std::min(std::max(new_value, 0), 255);
+				result.at<cv::Vec3b>(y, x)[c] = static_cast<uchar>(new_value);
+			}
+		}
+	}
+	return result;
+}

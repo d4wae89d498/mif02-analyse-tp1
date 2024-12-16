@@ -1,12 +1,12 @@
 #pragma once
 
-struct HistogramEq : Mif02Plugin
+struct HistogramStretch : Mif02Plugin
 {
 	Components::TextInput			factorComponent;
 
 	fn getName() const -> string_view override
 	{
-		return "Etirer Histogram";
+		return "Egaliser Histogram";
 	}
 
 	fn setupUi(wxBoxSizer* vbox, wxPanel* panel) -> void override
@@ -22,7 +22,7 @@ struct HistogramEq : Mif02Plugin
 		new CVImageWindow(nullptr, "Histograme avant traitement", generateHist(loadedImage));
 
 
-		filteredImg = stretchHist(loadedImage, factor);
+		filteredImg = equalizeHist(loadedImage, factor);
 
 
 		new CVImageWindow(nullptr, "Histograme apres traitement", generateHist(filteredImg));
@@ -30,4 +30,4 @@ struct HistogramEq : Mif02Plugin
 	}
 };
 
-REGISTER_PLUGIN(HistogramEq);
+REGISTER_PLUGIN(HistogramStretch);

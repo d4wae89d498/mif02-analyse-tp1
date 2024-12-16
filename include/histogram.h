@@ -5,9 +5,10 @@
 #include <unordered_map>
 #include <iostream>
 
+/*
+ * Un histogram est un tabeau de 256 entiers
+ */
 using histogram = std::array<unsigned long long, 256>;
-
-// eveything about histogram transformations ....
 
 /*
  *		Arondi a l'entier au plus proche
@@ -35,9 +36,15 @@ cv::Mat generateHist(const cv::Mat& img);
 
 
 /*
- *  Ajustement du contraste
+ *  Ajustement du contraste en fonction du facteur choisis
  */
 cv::Mat equalizeHist(const cv::Mat& img, double contrast_factor = 1.0);
+
+
+/*
+ * Etire lhistogram en fonction du facteur
+ */
+cv::Mat stretchHist(const cv::Mat& img, double stretch_factor = 1.0);
 
 
 #endif
