@@ -11,10 +11,9 @@
 
 
 // return an image from another where a median filter has been applied
-
-cv::Mat medianFilterGray(const cv::Mat & img); 
-cv::Mat medianFilterColor(const cv::Mat& img); 
-cv::Mat applyFilterMedian(const cv::Mat & img); 
+cv::Mat medianFilterGray(const cv::Mat& image, int kernelSize); 
+cv::Mat medianFilterColor(const cv::Mat& image, int kernelSize); 
+cv::Mat applyFilterMedian(const cv::Mat& img, int kernelSize); 
 
 // return an image from another where a convolotion has been applied
 

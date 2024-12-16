@@ -15,7 +15,10 @@ const std::vector<std::pair<std::string, std::string>> imageStoring = {
 
 
 void testFiltreMedian(cv::Mat & img) {
-    cv::Mat imgMedianFilter = medianFilterColor(img); 
+    int choice = 0; 
+    std::cout<<"Wich size for ur avecraging kernel do u yant"<<std::endl; 
+    std::cin>>choice; 
+    cv::Mat imgMedianFilter = applyFilterMedian(img, choice); 
     showImage(imgMedianFilter, "with Median Filter"); 
 }
 

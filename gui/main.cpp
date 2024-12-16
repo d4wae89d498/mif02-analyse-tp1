@@ -59,9 +59,11 @@ vector<unique_ptr<Mif02Plugin>>	plugins;
 	} TypeName##Instance;
 
 #include "addons/filter/average.hpp"
+#include "addons/filter/highpass.hpp"
 #include "addons/filter/gaussian.hpp"
 #include "addons/filter/laplacian.hpp"
 #include "addons/filter/sobel.hpp"
+#include "addons/filter/median.hpp"
 
 
 #include "addons/geometric/zoom.hpp"

@@ -22,7 +22,7 @@ struct Laplacian : Mif02Plugin
 
 
  		opencvCheckbox = new wxCheckBox(panel, wxID_ANY, "Utiliser fonction de OpenCV");
-		opencvCheckbox->SetValue(true);
+		opencvCheckbox->SetValue(false);
 		vbox->Add(opencvCheckbox, 0, wxALL, 10);
 
 		return;
@@ -34,7 +34,7 @@ struct Laplacian : Mif02Plugin
 		uint kernel = parse_odd_uint(kernelCtrl->GetValue().ToStdString());
 
 		if (opencvCheckbox->IsChecked()) {
-			cv::Laplacian(loadedImage, filteredImg, CV_32F,  kernel);
+			filteredImg = testLaplacianKernelWithOpenCv(loadedImage, kernel); 
 		} else {
 			filteredImg = applyConvolution(loadedImage,createLaplacianKernel(kernel));
 		}

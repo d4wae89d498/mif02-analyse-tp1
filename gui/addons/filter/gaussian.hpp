@@ -29,7 +29,7 @@ struct Gaussian : Mif02Plugin
 		vbox->Add(hbox3, 0, wxEXPAND | wxALL, 10);
 
  		opencvCheckbox = new wxCheckBox(panel, wxID_ANY, "Utiliser fonction de OpenCV");
-		opencvCheckbox->SetValue(true);
+		opencvCheckbox->SetValue(false);
 		vbox->Add(opencvCheckbox, 0, wxALL, 10);
 
 		return;
@@ -43,7 +43,7 @@ struct Gaussian : Mif02Plugin
 
 
 		if (opencvCheckbox->IsChecked()) {
-			cv::GaussianBlur(loadedImage, filteredImg, cv::Size(kernel, kernel), alpha);
+			filteredImg = testGaussianKernelWithOpenCv(loadedImage,kernel, alpha); 
 		} else {
 			filteredImg = applyConvolution(loadedImage,createGaussianKernel(kernel,alpha));
 		}

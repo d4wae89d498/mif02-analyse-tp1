@@ -1,13 +1,13 @@
 #pragma once
 
-struct Average : Mif02Plugin
+struct Median : Mif02Plugin
 {
     wxTextCtrl* kernelCtrl = nullptr;
     wxCheckBox* opencvCheckbox = nullptr;
 
 	fn getName() const -> string_view override
 	{
-		return "Filtre moyenneur";
+		return "Filtre median";
 	}
 
 	fn setupUi(wxBoxSizer* vbox, wxPanel* panel) -> void override
@@ -20,7 +20,7 @@ struct Average : Mif02Plugin
 		vbox->Add(hbox3, 0, wxEXPAND | wxALL, 10);
 
  		opencvCheckbox = new wxCheckBox(panel, wxID_ANY, "Utiliser fonction de OpenCV");
-		opencvCheckbox->SetValue(false);
+		opencvCheckbox->SetValue(true);
 		vbox->Add(opencvCheckbox, 0, wxALL, 10);
 
 		return;
@@ -32,10 +32,10 @@ struct Average : Mif02Plugin
 		uint kernel = parse_odd_uint(kernelCtrl->GetValue().ToStdString());
 
 		if (opencvCheckbox->IsChecked()) {
-			filteredImg = testAveragingKernelWithOpenCv(loadedImage, kernel);
+            cv::medianBlur(loadedImage, filteredImg, kernel);
 		} else {
-    		filteredImg = applyConvolution(loadedImage,createAveragingKernel(kernel));
+    		filteredImg = applyFilterMedian(loadedImage, kernel);
 		}
 	}
 };
-REGISTER_PLUGIN(Average);
+REGISTER_PLUGIN(Median);

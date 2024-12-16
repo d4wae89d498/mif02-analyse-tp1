@@ -4,27 +4,31 @@
 ///////////////////////////////////////// MEDIAN FILTER /////////////////////////////////////////
 
 
-cv::Mat medianFilterGray(const cv::Mat& image) {
-
+ cv::Mat medianFilterGray(const cv::Mat& image, int kernelSize) {
     if (image.channels() != 1) {
-        std::cerr << "Only gray images can be traited." << std::endl;
+        std::cerr << "Only gray images can be treated." << std::endl;
         return cv::Mat();
     }
 
+    if (kernelSize % 2 == 0 || kernelSize <= 1) {
+        std::cerr << "Kernel size must be an odd number greater than 1!" << std::endl;
+        return cv::Mat();
+    }
+
+    int halfKernel = kernelSize / 2;
     cv::Mat result = image.clone();
 
-    for (int i = 1; i < image.rows - 1; ++i) {
-        for (int j = 1; j < image.cols - 1; ++j) {
-            std::vector<uchar> pixels; // for storing the values of the neighbours 
-            for (int y = -1; y <= 1; ++y) {
-                for (int x = -1; x <= 1; ++x) { // 3*3
-                    if (y == 0 && x == 0) continue; 
+    for (int i = halfKernel; i < image.rows - halfKernel; ++i) {
+        for (int j = halfKernel; j < image.cols - halfKernel; ++j) {
+            std::vector<uchar> pixels; // for storing the values of the neighbours pixels 
+            for (int y = -halfKernel; y <= halfKernel; ++y) {
+                for (int x = -halfKernel; x <= halfKernel; ++x) {
                     pixels.push_back(image.at<uchar>(i + y, j + x));
                 }
             }
 
-            std::sort(pixels.begin(), pixels.end()); // sort the values of pixels 
-            uchar medianValue = pixels[pixels.size() / 2]; // caculate the median 
+            std::sort(pixels.begin(), pixels.end()); 
+            uchar medianValue = pixels[pixels.size() / 2]; 
             result.at<uchar>(i, j) = medianValue;
         }
     }
@@ -33,18 +37,22 @@ cv::Mat medianFilterGray(const cv::Mat& image) {
 }
 
 
-cv::Mat medianFilterColor(const cv::Mat& image) {
-
+cv::Mat medianFilterColor(const cv::Mat& image, int kernelSize) {
     if (image.channels() != 3) {
-        std::cerr << "Only image in color can be traited!" << std::endl;
+        std::cerr << "Only color images can be treated!" << std::endl;
+        return cv::Mat();
+    }
+
+    if (kernelSize % 2 == 0 || kernelSize <= 1) {
+        std::cerr << "Kernel size must be an odd number greater than 1!" << std::endl;
         return cv::Mat();
     }
 
     std::vector<cv::Mat> channels;
-    cv::split(image, channels); // get the three channels 
+    cv::split(image, channels); 
 
     for (int i = 0; i < 3; ++i) {
-        channels[i] = medianFilterGray(channels[i]); 
+        channels[i] = medianFilterGray(channels[i], kernelSize);
     }
 
     cv::Mat filteredImage;
@@ -52,9 +60,8 @@ cv::Mat medianFilterColor(const cv::Mat& image) {
     return filteredImage;
 }
 
-
-cv::Mat applyFilterMedian(const cv::Mat &img) {
-    return img.channels()==1 ? medianFilterGray(img) : medianFilterColor(img) ;
+cv::Mat applyFilterMedian(const cv::Mat& img, int kernelSize) {
+    return img.channels() == 1 ? medianFilterGray(img, kernelSize) : medianFilterColor(img, kernelSize);
 }
 
 

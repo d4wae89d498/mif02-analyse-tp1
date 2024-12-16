@@ -1,13 +1,13 @@
 #pragma once
 
-struct Average : Mif02Plugin
+struct Highpass : Mif02Plugin
 {
     wxTextCtrl* kernelCtrl = nullptr;
     wxCheckBox* opencvCheckbox = nullptr;
 
 	fn getName() const -> string_view override
 	{
-		return "Filtre moyenneur";
+		return "Filtre passe haut";
 	}
 
 	fn setupUi(wxBoxSizer* vbox, wxPanel* panel) -> void override
@@ -32,10 +32,11 @@ struct Average : Mif02Plugin
 		uint kernel = parse_odd_uint(kernelCtrl->GetValue().ToStdString());
 
 		if (opencvCheckbox->IsChecked()) {
-			filteredImg = testAveragingKernelWithOpenCv(loadedImage, kernel);
+			//cv::blur(loadedImage, filteredImg, cv::Size(kernel, kernel));
+			filteredImg = testHighPassKernelWithOpenCv(loadedImage, kernel); 
 		} else {
-    		filteredImg = applyConvolution(loadedImage,createAveragingKernel(kernel));
+    		filteredImg = applyConvolution(loadedImage,createHighPassKernel(kernel));
 		}
 	}
 };
-REGISTER_PLUGIN(Average);
+REGISTER_PLUGIN(Highpass);

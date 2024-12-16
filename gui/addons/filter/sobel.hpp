@@ -29,7 +29,7 @@ struct Sobel : Mif02Plugin
 		vbox->Add(hbox3, 0, wxEXPAND | wxALL, 10);
 
  		opencvCheckbox = new wxCheckBox(panel, wxID_ANY, "Utiliser fonction de OpenCV");
-		opencvCheckbox->SetValue(true);
+		opencvCheckbox->SetValue(false);
 		vbox->Add(opencvCheckbox, 0, wxALL, 10);
 
 		return;
@@ -43,7 +43,7 @@ struct Sobel : Mif02Plugin
 
 
 		if (opencvCheckbox->IsChecked()) {
-			cv::Sobel(loadedImage, filteredImg, CV_8U, choiceDirection ? 1 : 0, choiceDirection ? 0 : 1, kernel);
+			filteredImg = testSobelKernelWithOpenCv(loadedImage,kernel,choiceDirection); 
 		} else {
 			filteredImg = applyConvolution(loadedImage, createSobelKernel(kernel, choiceDirection));
 		}
