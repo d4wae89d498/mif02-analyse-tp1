@@ -58,6 +58,16 @@ vector<unique_ptr<Mif02Plugin>>	plugins;
 		}												\
 	} TypeName##Instance;
 
+namespace Components
+{
+	#include "components/BoolInput.hpp"
+	#include "components/TextInput.hpp"
+	#include "components/OddIntegerInput.hpp"
+}
+
+Components::OddIntegerInput kernelSizeComponent { "Taille du kernel: ", 5, 1, 31 };
+Components::BoolInput 		useOpenCVComponent 	{ "Utiliser fonction de OpenCV", false };
+
 #include "addons/filter/average.hpp"
 #include "addons/filter/highpass.hpp"
 #include "addons/filter/gaussian.hpp"
@@ -131,7 +141,7 @@ fn Mif02Filters::OnInit() -> bool {
 Mif02FiltersFrame::Mif02FiltersFrame()
     : wxFrame(nullptr, wxID_ANY, "Mif02 - Analyse - TP1", wxDefaultPosition, wxSize(800, 600)) {
     wxMenu* fileMenu = new wxMenu;
-    fileMenu->Append(wxID_OPEN, "&Open Picture\tCtrl-O");
+    fileMenu->Append(wxID_OPEN, "&Ouvrir une image\tCtrl-O");
     wxMenuBar* menuBar = new wxMenuBar;
     menuBar->Append(fileMenu, "&File");
     SetMenuBar(menuBar);
@@ -153,54 +163,27 @@ Mif02FiltersFrame::Mif02FiltersFrame()
     wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
 
     wxBoxSizer* hbox1 = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticText* filterLabel = new wxStaticText(panel, wxID_ANY, "Filter:");
+    wxStaticText* filterLabel = new wxStaticText(panel, wxID_ANY, "Fonction:");
     filterChoice = new wxChoice(panel, wxID_ANY);
-
     filterChoice->Append("------ Choissez un outil -------");
-	/*filterChoice->Append("-- Filtres : ---");
-    filterChoice->Append("Médian");
-    filterChoice->Append("Moyenneur");
-    filterChoice->Append("Gaussienne");
-    filterChoice->Append("Sobel");
-    filterChoice->Append("Laplacien");
-
-	filterChoice->Append("-- Amélioration d'images : ---");
-	filterChoice->Append("Voir Histogramme");
-	filterChoice->Append("Égalisation d'histogramme");
-	filterChoice->Append("Étirement ou expansion d'histogramme");
-
-	filterChoice->Append("-- Transformation géométrique : ---");
-	filterChoice->Append("Zoom");
-    filterChoice->Append("Rotation");*/
-
 	for (auto &item : plugins)
 	{
 		auto sv = item->getName();
 		filterChoice->Append(wxString(sv.data(), sv.size()));
 	}
-
     filterChoice->SetSelection(0);
     hbox1->Add(filterLabel, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
     hbox1->Add(filterChoice, 1, wxEXPAND);
     vbox->Add(hbox1, 0, wxEXPAND | wxALL, 10);
-
     mainSizer->Add(vbox, 0, wxEXPAND | wxALL, 10);
-
     extensibleSizer = new wxBoxSizer(wxVERTICAL);
-
     mainSizer->Add(extensibleSizer, 0, wxEXPAND | wxALL, 10);
-
     panel->SetSizer(mainSizer);
-
 
     filterChoice->Bind(wxEVT_CHOICE, [=](wxCommandEvent& event) {
 		extensibleSizer->Clear(true);
-		cout << "Changed." << endl;
-
         wxString selectedFilter = filterChoice->GetStringSelection();
-
-		Mif02Plugin *plugin;
-
+		Mif02Plugin *plugin = nullptr;
 		for (auto& item: plugins)
 		{
 			auto sv = item->getName();
@@ -210,14 +193,13 @@ Mif02FiltersFrame::Mif02FiltersFrame()
 				break ;
 			}
 		}
-
+		if (!plugin)
+			return ;
 		plugin->setupUi(extensibleSizer, panel);
-
-		wxButton* applyButton = new wxButton(panel, wxID_ANY, "Apply Filter");
+		wxButton* applyButton = new wxButton(panel, wxID_ANY, "Appliquer");
 		extensibleSizer->Add(applyButton, 0, wxALIGN_CENTER | wxALL, 10);
 		applyButton->Bind(wxEVT_BUTTON, [=](wxCommandEvent& event) {
 			if (!loadedImage.empty()) {
-
 				processedImage = loadedImage.clone();
 				try {
 					plugin->onApply(loadedImage, processedImage);
@@ -256,18 +238,6 @@ Mif02FiltersFrame::Mif02FiltersFrame()
     }, wxID_OPEN);
 
 	Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
-	//	if (!loadedImage.empty())
-	//		ShowImage(beforeImage, loadedImage);
-	//	if (!processedImage.empty())
- 	//		ShowImage(afterImage, processedImage);
-/*
- 		auto minWidth = beforeImage->GetMinSize().GetWidth() * 2;
-        auto minHeight = beforeImage->GetMinSize().GetHeight();
-
-
-		SetMinSize(wxSize(minWidth, minHeight));
-*/
-
 		mainSizer->Layout();
 		event.Skip();
 	});

@@ -1,8 +1,8 @@
 #include "geometric.h"
 #include <cmath>
 
- cv::Mat applyResize(const cv::Mat& image, double scale)
- {
+cv::Mat applyResize(const cv::Mat& image, double scale)
+{
 	cv::Mat resized;
 	int newWidth = static_cast<int>(image.cols * scale);
 	int newHeight = static_cast<int>(image.rows * scale);
@@ -17,6 +17,13 @@
 		}
 	}
 
+	return resized;
+}
+
+
+cv::Mat	testResizeWithOpenCv(const cv::Mat &image, double scale) {
+	cv::Mat resized;
+	cv::resize(image, resized, cv::Size(), scale, scale, cv::INTER_LINEAR);
 	return resized;
 }
 
@@ -50,3 +57,20 @@ cv::Mat	applyRotation(const cv::Mat&  loadedImage, double angle)
 
 	return rotatedImg;
 }
+
+
+cv::Mat	testRotationWithOpenCv(const cv::Mat&  loadedImage, double angle) {
+
+	cv::Mat filteredImg;
+
+    cv::Point2f center(loadedImage.cols / 2.0, loadedImage.rows / 2.0);
+
+	cv::Mat rotationMatrix = cv::getRotationMatrix2D(center, angle, 1.0);
+	cv::Rect2f bbox = cv::RotatedRect(cv::Point2f(), loadedImage.size(), angle).boundingRect2f();
+	rotationMatrix.at<double>(0, 2) += bbox.width / 2.0 - center.x;
+	rotationMatrix.at<double>(1, 2) += bbox.height / 2.0 - center.y;
+	cv::warpAffine(loadedImage, filteredImg, rotationMatrix, bbox.size());
+
+	return filteredImg;
+}
+

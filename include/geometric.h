@@ -6,8 +6,10 @@
 // eveything about geometric transformations ....
 
 cv::Mat applyResize(const cv::Mat& image, double scale);
-
 cv::Mat	applyRotation(const cv::Mat&  loadedImage, double angle);
+
+cv::Mat testResizeWithOpenCv(const cv::Mat& image, double scale);
+cv::Mat	testRotationWithOpenCv(const cv::Mat&  loadedImage, double angle);
 
 
 #endif
