@@ -80,6 +80,7 @@ namespace Components
 {
 	#include "components/BoolInput.hpp"
 	#include "components/TextInput.hpp"
+	#include "components/IntegerInput.hpp"
 	#include "components/OddIntegerInput.hpp"
 }
 
@@ -99,6 +100,8 @@ Components::BoolInput 		useOpenCVComponent 	{ "Utiliser fonction de OpenCV", fal
 
 #include "addons/histogram/show.hpp"
 #include "addons/histogram/equalize.hpp"
+#include "addons/histogram/stretch.hpp"
+#include "addons/histogram/shift.hpp"
 
 
 struct Mif02Filters : public wxApp {

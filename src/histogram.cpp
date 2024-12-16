@@ -9,6 +9,19 @@ int Round(float value)
 	}
 }
 
+template <typename T>
+T saturate_cast(int value)
+{
+	if (value < 0) {
+		return 0;
+	}
+	if (value > 255) {
+		return 255;
+	}
+	return static_cast<T>(value);
+}
+template uchar saturate_cast<uchar>(int value);
+
 
 histogram calcHist(const cv::Mat& img, int channel)
 {
@@ -156,5 +169,24 @@ cv::Mat stretchHist(const cv::Mat& img, double stretch_factor)
 			}
 		}
 	}
+	return result;
+}
+
+
+
+
+cv::Mat shiftColors(const cv::Mat& img, int shiftB, int shiftG, int shiftR) {
+	cv::Mat result = img.clone();
+
+	for (int y = 0; y < img.rows; y++) {
+		for (int x = 0; x < img.cols; x++) {
+			cv::Vec3b& pixel = result.at<cv::Vec3b>(y, x);
+
+			pixel[0] = saturate_cast<uchar>(pixel[0] + shiftB); //B
+			pixel[1] = saturate_cast<uchar>(pixel[1] + shiftG); // G
+			pixel[2] = saturate_cast<uchar>(pixel[2] + shiftR); // R
+		}
+	}
+
 	return result;
 }

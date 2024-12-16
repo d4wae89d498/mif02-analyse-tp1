@@ -6,7 +6,7 @@ struct HistogramStretch : Mif02Plugin
 
 	fn getName() const -> string_view override
 	{
-		return "Egaliser Histogram";
+		return "Etirer Histogram";
 	}
 
 	fn setupUi(wxBoxSizer* vbox, wxPanel* panel) -> void override

@@ -63,7 +63,7 @@ cv::Mat	testRotationWithOpenCv(const cv::Mat&  loadedImage, double angle) {
 
 	cv::Mat filteredImg;
 
-    cv::Point2f center(loadedImage.cols / 2.0, loadedImage.rows / 2.0);
+	cv::Point2f center(loadedImage.cols / 2.0, loadedImage.rows / 2.0);
 
 	cv::Mat rotationMatrix = cv::getRotationMatrix2D(center, angle, 1.0);
 	cv::Rect2f bbox = cv::RotatedRect(cv::Point2f(), loadedImage.size(), angle).boundingRect2f();

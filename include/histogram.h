@@ -10,6 +10,11 @@
  */
 using histogram = std::array<unsigned long long, 256>;
 
+template <typename T>
+T saturate_cast(int value);
+
+
+
 /*
  *		Arondi a l'entier au plus proche
  */
@@ -46,5 +51,8 @@ cv::Mat equalizeHist(const cv::Mat& img, double contrast_factor = 1.0);
  */
 cv::Mat stretchHist(const cv::Mat& img, double stretch_factor = 1.0);
 
+
+
+cv::Mat shiftColors(const cv::Mat& img, int shiftB = 0, int shiftG = 0, int shiftR = 0);
 
 #endif
