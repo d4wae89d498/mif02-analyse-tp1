@@ -21,15 +21,38 @@ using namespace std;
 #include "histogram.h"
 
 
-fn parse_odd_uint(string str) -> uint
+class CVImageWindow : public wxFrame
 {
-	uint kernel = 0;
-	auto [ptr, ec] = from_chars(str.data(), str.data() + str.size(), kernel);
-	if (ec != errc() || !(kernel % 2)) {
-		throw runtime_error("Erreur, la valeur doit etre entiere, positive et impaire.");
-	}
-	return kernel;
-}
+public:
+    CVImageWindow(wxWindow* parent, const wxString& title, const cv::Mat& img)
+        : wxFrame(parent, wxID_ANY, title)
+    {
+        // Convert OpenCV cv::Mat to wxImage
+        cv::Mat imgRGB;
+        cv::cvtColor(img, imgRGB, cv::COLOR_BGR2RGB);  // Convert from BGR to RGB
+
+        // Create a wxImage from the cv::Mat
+        wxImage wxImg(imgRGB.cols, imgRGB.rows, imgRGB.data, true);
+
+        // Create a StaticBitmap to display the wxImage
+        m_imageCtrl = new wxStaticBitmap(this, wxID_ANY, wxBitmap(wxImg));
+
+        // Create a vertical box sizer and add the image control
+        wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
+        vbox->Add(m_imageCtrl, 1, wxEXPAND | wxALL, 10);
+        SetSizer(vbox);
+
+        // Set the size of the window based on the image size
+        SetSize(wxSize(imgRGB.cols + 20, imgRGB.rows + 50));
+
+        // Show the frame
+        Show(true);
+    }
+
+private:
+    wxStaticBitmap* m_imageCtrl;  // To display the image
+};
+
 
 fn parse_bool(string str) -> uint
 {

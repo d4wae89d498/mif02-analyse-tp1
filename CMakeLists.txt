@@ -13,7 +13,6 @@ find_package(wxWidgets REQUIRED)
 include(${wxWidgets_USE_FILE})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-
 if(USE_GUI)
     set(MAIN_SOURCE ${CMAKE_SOURCE_DIR}/gui/main.cpp)
 else()

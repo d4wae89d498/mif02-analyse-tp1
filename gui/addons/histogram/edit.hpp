@@ -34,7 +34,7 @@ struct HistogramLUT : Mif02Plugin
 
 		if (lowerBound >= 0 && upperBound <= 255 && lowerBound < upperBound)
 		{
-			displayHistogram(filteredImg);
+			new CVImageWindow(nullptr, "Histograme", generateHistogram(filteredImg));
 		}
 		else
 		{
