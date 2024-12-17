@@ -12,12 +12,6 @@
 using histogram = std::array<unsigned long long, 256>;
 using lut = std::array<uchar, 256>;
 
-struct LUTs {
-	lut lutR;
-	lut lutG;
-	lut lutB;
-};
-
 
 template <typename T>
 T saturate_cast(int value);

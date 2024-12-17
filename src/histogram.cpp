@@ -317,8 +317,8 @@ cv::Mat generateLUTImage(const lut& transformation)
 		);
 	}
 
-	cv::line(lutImage, cv::Point(0, height), cv::Point(width, height), cv::Scalar(255, 255, 255), 2); // Axe des abscisses
-	cv::line(lutImage, cv::Point(0, height), cv::Point(0, 0), cv::Scalar(255, 255, 255), 2); // Axe des ordonnées
+	cv::line(lutImage, cv::Point(0, height), cv::Point(width, height), cv::Scalar(255, 255, 255), 2);
+	cv::line(lutImage, cv::Point(0, height), cv::Point(0, 0), cv::Scalar(255, 255, 255), 2);
 
 	return lutImage;
 }
