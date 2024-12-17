@@ -320,5 +320,15 @@ cv::Mat generateLUTImage(const lut& transformation)
 	cv::line(lutImage, cv::Point(0, height), cv::Point(width, height), cv::Scalar(255, 255, 255), 2);
 	cv::line(lutImage, cv::Point(0, height), cv::Point(0, 0), cv::Scalar(255, 255, 255), 2);
 
+ 	for (int i = 1; i < 256; i++) {
+		cv::line(
+			lutImage,
+			cv::Point((i - 1) * 2, height - transformation[i - 1] * height / 256),
+			cv::Point(i * 2, height - transformation[i] * height / 256),
+			cv::Scalar(255, 255, 255),
+			2
+		);
+	}
+
 	return lutImage;
 }

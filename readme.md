@@ -4,9 +4,9 @@
 
 ## Tester avec GUI (par default):
 
-`mkdir build && cmake .. && make && ./MonProjet`
+`mkdir build && cd build && cmake .. && make && ./MonProjet`
 
 
 ## Tester avec terminal :
 
-`mkdir build && cmake .. -DUSE_GUI=OFF && make && ./MonProjet`
+`mkdir build && cd build && cmake .. -DUSE_GUI=OFF && make && ./MonProjet`
