@@ -9,12 +9,13 @@ struct HistogramShow : Mif02Plugin
 
 	fn setupUi(wxBoxSizer* vbox, wxPanel* panel) -> void override
 	{
+		useLogNormInHistComponent.setupUi(vbox, panel);
 	}
 
 
 	fn onApply(const cv::Mat& loadedImage, cv::Mat& filteredImg) -> void override
 	{
-		new CVImageWindow(nullptr, "Histograme", generateHist(filteredImg));
+		new CVImageWindow(nullptr, "Histograme", generateHistImage(filteredImg, useLogNormInHistComponent.checkbox->IsChecked()),  315, -330);
 	}
 };
 

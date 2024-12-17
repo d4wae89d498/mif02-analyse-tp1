@@ -1,14 +1,23 @@
 #ifndef HISTOGRAM_H
 #define HISTOGRAM_H
 
+#include <array>
+
 #include <opencv2/opencv.hpp>
-#include <unordered_map>
-#include <iostream>
+
 
 /*
  * Un histogram est un tabeau de 256 entiers
  */
 using histogram = std::array<unsigned long long, 256>;
+using lut = std::array<uchar, 256>;
+
+struct LUTs {
+	lut lutR;
+	lut lutG;
+	lut lutB;
+};
+
 
 template <typename T>
 T saturate_cast(int value);
@@ -30,14 +39,14 @@ histogram calcHist(const cv::Mat& img, int channel);
 /*
  *  Met l'histogram a l'echelle  demandee
  */
-void normalizeHist(histogram &hist, int maxVal = 255);
+void normalizeHist(uint pixels, histogram &hist, uint histHeight);
 
 
 /*
  *  Calcule l'histogramme d'une image en utilisant des tableaux histogram pour chaque canal (BGR),
  *	puis le normalise avant de le retourner sous forme d'image ocv avec des labels d'échelle pour les axes.
  */
-cv::Mat generateHist(const cv::Mat& img);
+cv::Mat generateHistImage(const cv::Mat& img, bool logNorm);
 
 
 /*
@@ -54,5 +63,16 @@ cv::Mat stretchHist(const cv::Mat& img, double stretch_factor = 1.0);
 
 
 cv::Mat shiftColors(const cv::Mat& img, int shiftB = 0, int shiftG = 0, int shiftR = 0);
+
+
+
+cv::Mat compressImage(const cv::Mat& input, uint numColors);
+cv::Mat compressImageWithOpenCV(const cv::Mat& input, uint numColors);
+
+
+void applyLUTToChannel(cv::Mat& image, const lut& channelLUT, int channelIndex);
+void applyLUTsToChannels(cv::Mat& image, const lut& rLUT, const lut& gLUT, const lut& bLUT);
+lut calculateLutBetweenImages(const cv::Mat& image1, const cv::Mat& image2) ;
+cv::Mat generateLUTImage(const lut& transformation);
 
 #endif

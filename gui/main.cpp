@@ -1,4 +1,5 @@
 #include <wx/wx.h>
+#include <wx/utils.h>
 #include <wx/filedlg.h>
 #include <wx/choice.h>
 #include <wx/spinctrl.h>
@@ -58,6 +59,8 @@ struct CVImageWindow : wxFrame
 		Show(true);
 	}
 
+	~CVImageWindow() {}
+
 	wxStaticBitmap* imageCtrl;
 };
 
@@ -99,6 +102,8 @@ namespace Components
 
 Components::OddIntegerInput kernelSizeComponent { "Taille du kernel: ", 5, 1, 31 };
 Components::BoolInput 		useOpenCVComponent 	{ "Utiliser fonction de OpenCV", false };
+Components::BoolInput 		useLogNormInHistComponent 	{ "Utiliser normalisation logarithmique dans l'histogramme", false };
+
 
 #include "addons/filter/average.hpp"
 #include "addons/filter/highpass.hpp"
@@ -115,6 +120,7 @@ Components::BoolInput 		useOpenCVComponent 	{ "Utiliser fonction de OpenCV", fal
 #include "addons/histogram/equalize.hpp"
 #include "addons/histogram/stretch.hpp"
 #include "addons/histogram/shift.hpp"
+#include "addons/histogram/compression.hpp"
 
 
 struct Mif02Filters : public wxApp {
@@ -230,6 +236,8 @@ Mif02FiltersFrame::Mif02FiltersFrame()
 		}
 		if (!plugin)
 			return ;
+		std::cout << "SETUP UI" << std::endl;
+		std::cout << "END" << std::endl;
 		plugin->setupUi(extensibleSizer, panel);
 		wxButton* applyButton = new wxButton(panel, wxID_ANY, "Appliquer");
 		extensibleSizer->Add(applyButton, 0, wxALIGN_CENTER | wxALL, 10);
@@ -237,19 +245,24 @@ Mif02FiltersFrame::Mif02FiltersFrame()
 			if (!loadedImage.empty()) {
 				processedImage = loadedImage.clone();
 				try {
+					auto windows = wxTopLevelWindows;
+					for (wxWindow* win : windows) {
+						if (win != this) {
+							win->Close(false);
+						}
+					}
 					plugin->onApply(loadedImage, processedImage);
+					ShowImage(beforeImage, loadedImage);
+					ShowImage(afterImage, processedImage);
+					UpdateWindowLayout(true);
 				}
 				catch (const exception& ex) {
 					wxString errorMessage = wxString::Format("Erreur : %s", ex.what());
-					wxMessageBox(errorMessage, "Info", wxOK | wxICON_INFORMATION);
+					wxMessageBox(errorMessage, "Error", wxOK | wxICON_INFORMATION);
 				}
 				catch (...) {
 					wxMessageBox("Une erreur inconnue s'est produite", "Info", wxOK | wxICON_INFORMATION);
 				}
-
-				ShowImage(beforeImage, loadedImage);
-				ShowImage(afterImage, processedImage);
-				UpdateWindowLayout(true);
 			} else {
 				wxMessageBox( "Merci de d'abord ouvrir une image.", "Error", wxOK | wxICON_ERROR, this);
 			}
